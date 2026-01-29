@@ -9,7 +9,7 @@ const isAppRole = (value: AppRole) => {
   return value === "student" || value === "teacher" || value === "admin" || value === "parent";
 };
 
-export const requreAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const session = await auth.api.getSession({headers: await req.headers});
         const userId = session?.user?.id;
@@ -40,6 +40,7 @@ export const requreAuth = async (req: Request, res: Response, next: NextFunction
 
         next();
     } catch (error) {
-        res.status(500).json({error: error, message: "Auth check failed"});
+        console.error("Auth check failed: ", error);
+        res.status(500).json({message: "Auth check failed"});
     }
 }
