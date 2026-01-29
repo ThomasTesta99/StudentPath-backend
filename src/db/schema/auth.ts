@@ -1,6 +1,6 @@
 import { boolean, index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-export const roleEnum = pgEnum("role", ["student", "teacher", "admin"]);
+export const roleEnum = pgEnum("role", ["student", "teacher", "admin", "parent"]);
 
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),

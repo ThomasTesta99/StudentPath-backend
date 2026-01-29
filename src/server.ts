@@ -2,6 +2,8 @@ import express from 'express'
 import cors from 'cors'
 import { toNodeHandler } from "better-auth/node";
 import { auth } from './lib/auth';
+import { requireAuth } from './middleware/requireAuth';
+import { requireRole } from './middleware/requireRole';
 
 const app = express();
 const PORT = 8000;
@@ -16,12 +18,16 @@ app.use(cors({
     credentials: true, 
 }));
 
-app.all("/api/auth/*", toNodeHandler(auth));
+app.all("/api/auth/*splat", toNodeHandler(auth));
 
 app.use(express.json());
 
 app.get('/', (req, res) => {
-    res.send("Hello, welcome to StudentPath backend");
+    res.send('Hello, welcome to the Classroom API');
+});
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/admin/ping", requireAuth, requireRole(["admin"]), (_req, res) => {
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {
