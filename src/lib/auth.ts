@@ -12,7 +12,7 @@ if (!betterAuthSecret || !frontendUrl) {
 
 
 export const auth = betterAuth({
-    secret: process.env.betterAuthSecret, 
+    secret: betterAuthSecret, 
     trustedOrigins: [frontendUrl], 
     database: drizzleAdapter(db, {
         provider: "pg", 
