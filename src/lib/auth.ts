@@ -3,9 +3,17 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";// your drizzle in
 import { db } from "../db";
 import * as schema from '../db/schema/auth'
 
+
+const betterAuthSecret = process.env.BETTER_AUTH_SECRET;
+const frontendUrl = process.env.FRONTEND_URL;
+if (!betterAuthSecret || !frontendUrl) {
+    throw new Error("BETTER_AUTH_SECRET and FRONTEND_URL must be set");
+}
+
+
 export const auth = betterAuth({
-    secret: process.env.BETTER_AUTH_SECRET!, 
-    trustedOrigins: [process.env.FRONTEND_URL!], 
+    secret: process.env.betterAuthSecret, 
+    trustedOrigins: [frontendUrl], 
     database: drizzleAdapter(db, {
         provider: "pg", 
         schema
