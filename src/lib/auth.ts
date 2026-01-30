@@ -6,12 +6,14 @@ import * as schema from '../db/schema/auth'
 
 const betterAuthSecret = process.env.BETTER_AUTH_SECRET;
 const frontendUrl = process.env.FRONTEND_URL;
-if (!betterAuthSecret || !frontendUrl) {
-    throw new Error("BETTER_AUTH_SECRET and FRONTEND_URL must be set");
+const baseUrl = process.env.BETTER_AUTH_BASE_URL;
+if (!betterAuthSecret || !frontendUrl || !baseUrl) {
+    throw new Error("BETTER_AUTH_SECRET,BETTER_AUTH_BASE_URL and FRONTEND_URL must be set");
 }
 
 
 export const auth = betterAuth({
+    baseURL: baseUrl,
     secret: betterAuthSecret, 
     trustedOrigins: [frontendUrl], 
     database: drizzleAdapter(db, {
@@ -20,5 +22,13 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true, 
+    },
+    additionalFields: {
+        role: {
+            type: "enum", 
+            required: true, 
+            defaultValue: "student", 
+            input: true,
+        }
     }
 })

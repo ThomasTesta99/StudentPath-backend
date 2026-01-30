@@ -18,11 +18,12 @@ app.use(cors({
     credentials: true, 
 }));
 
-app.all("/api/auth/*splat", toNodeHandler(auth));
+app.all('/api/auth/*splat', toNodeHandler(auth));
 
+app.set("trust proxy", 1);
 app.use(express.json());
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
     res.send('Hello, welcome to the Classroom API');
 });
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
