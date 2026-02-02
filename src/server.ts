@@ -12,15 +12,15 @@ if(!process.env.FRONTEND_URL){
     throw new Error("FRONTEND_URL not defined");
 }
 
+app.set("trust proxy", 1);
 app.use(cors({
     origin: process.env.FRONTEND_URL, 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', "OPTIONS"],
     credentials: true, 
 }));
 
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
-app.set("trust proxy", 1);
 app.use(express.json());
 
 app.get('/', async (req, res) => {

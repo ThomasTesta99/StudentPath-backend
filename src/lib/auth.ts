@@ -23,12 +23,14 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true, 
     },
-    additionalFields: {
-        role: {
-            type: "enum", 
-            required: true, 
-            defaultValue: "student", 
-            input: true,
+    user: {
+        additionalFields: {
+            role: {
+                type: "string", 
+                required: true, 
+                defaultValue: "student", 
+                input: true,
+            }
         }
     }
 })
