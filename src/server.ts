@@ -4,6 +4,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from './lib/auth';
 import { requireAuth } from './middleware/requireAuth';
 import { requireRole } from './middleware/requireRole';
+import { schoolsRouter } from './routes/admin/schools';
 
 const app = express();
 const PORT = 8000;
@@ -15,13 +16,15 @@ if(!process.env.FRONTEND_URL){
 app.set("trust proxy", 1);
 app.use(cors({
     origin: process.env.FRONTEND_URL, 
-    methods: ['GET', 'POST', 'PUT', 'DELETE', "OPTIONS"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', "OPTIONS", "PATCH"],
     credentials: true, 
 }));
 
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.use(express.json());
+
+app.use("/api/admin/schools", requireAuth, requireRole(['admin']), schoolsRouter);
 
 app.get('/', async (req, res) => {
     res.send('Hello, welcome to the Classroom API');

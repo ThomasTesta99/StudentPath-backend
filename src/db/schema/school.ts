@@ -25,7 +25,7 @@ export const terms = pgTable("terms", {
 
 );
 
-export type Schools = typeof schools.$inferSelect;
+export type School = typeof schools.$inferSelect;
 export type NewSchool = typeof schools.$inferInsert;
 
 export type Terms = typeof terms.$inferSelect;
