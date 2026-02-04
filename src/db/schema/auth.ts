@@ -7,12 +7,6 @@ const timestamps = {
     updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull()
 };
 
-export const appUsers = pgTable("app_users", {
-    userId: text("user_id").primaryKey(), 
-    role: roleEnum("role").default("student").notNull(),
-    ...timestamps
-});
-
 export const user = pgTable("user", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
