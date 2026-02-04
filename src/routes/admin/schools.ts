@@ -1,5 +1,5 @@
 import express from 'express';
-import { and, desc, ilike, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { NewSchool, School, schools } from '../../db/schema';
 import { db } from '../../db';
 import { randomUUID } from 'crypto';
@@ -39,7 +39,7 @@ schoolsRouter.get("/", async (req, res) => {
             .offset(offset)
             .orderBy(desc(schools.createdAt));
 
-        res.status(200).json({
+        return res.status(200).json({
             data: schoolsList,
             pagination: {
                 page: currentPage, 
@@ -72,7 +72,7 @@ schoolsRouter.post("/", async (req, res) => {
             .values({...newSchool})
             .returning({id: schools.id, schoolName: schools.schoolName});
 
-        res.status(201).json({
+        return res.status(201).json({
             data: createdSchool
         })
     } catch (error) {
@@ -80,3 +80,39 @@ schoolsRouter.post("/", async (req, res) => {
         res.status(500).json({error: "Failed to create a school"});
     }
 });
+
+schoolsRouter.patch("/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+        const {schoolName} = req.body;
+
+        const updates: Partial<NewSchool> = {};
+
+        if(typeof schoolName === "string"){
+            const trimmed = schoolName.trim();
+            if(trimmed.length === 0){
+                return res.status(400).json({error: "Must enter school name"});
+            }
+            updates.schoolName = trimmed;
+        }
+
+        if(Object.keys(updates).length === 0){
+            return res.status(400).json({error: "No valid fields to update"});
+        }
+
+        const [updated] = await db
+            .update(schools)
+            .set(updates)
+            .where(eq(schools.id, id))
+            .returning({id: schools.id, schoolName: schools.schoolName});
+
+        if(!updated){
+            return res.status(404).json({error: "School not found"});
+        }
+
+        return res.status(200).json({data: updated});
+    } catch (error) {
+        console.error("PATCH /schools/:id error: ", error);
+        return res.status(500).json({error: "Failed to update school"});
+    }
+})
