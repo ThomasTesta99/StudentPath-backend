@@ -22,6 +22,20 @@
       "when": 1770223234130,
       "tag": "0002_clumsy_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770228034357,
+      "tag": "0003_curly_vengeance",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770231892591,
+      "tag": "0004_wet_hitman",
+      "breakpoints": true
     }
   ]
 }
