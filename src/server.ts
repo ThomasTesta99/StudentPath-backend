@@ -16,7 +16,7 @@ if(!process.env.FRONTEND_URL){
 app.set("trust proxy", 1);
 app.use(cors({
     origin: process.env.FRONTEND_URL, 
-    methods: ['GET', 'POST', 'PUT', 'DELETE', "OPTIONS", "PATCH"],
+    methods: ['GET', 'POST', 'PUT', 'DELETE',  "PATCH"],
     credentials: true, 
 }));
 
