@@ -1,4 +1,4 @@
-import { date, index, integer, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { date, index, integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { schools } from "./school";
 import { timestamps } from "./timestamps";
@@ -47,13 +47,10 @@ export const parentStudentLinks = pgTable("parent_student_links", {
     ...timestamps
 },
     (table) => ({
+        pk: primaryKey({ columns: [table.parentId, table.studentId] }),
         parentIdIdx: index("parent_student_links_parent_id_idx").on(table.parentId),
         studentIdIdx: index("parent_student_links_student_id_idx").on(table.studentId),
 
-        parentStudentUnique: uniqueIndex("parent_student_links_unique").on(
-            table.parentId,
-            table.studentId
-        ),
     })
 )
 
