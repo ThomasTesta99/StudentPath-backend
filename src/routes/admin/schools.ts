@@ -1,7 +1,8 @@
 import express from 'express';
-import { and, desc, ilike, or, sql } from 'drizzle-orm';
-import { School, schools } from '../../db/schema';
+import { and, desc, ilike, sql } from 'drizzle-orm';
+import { NewSchool, School, schools } from '../../db/schema';
 import { db } from '../../db';
+import { randomUUID } from 'crypto';
 
 export const schoolsRouter = express.Router();
 
@@ -9,8 +10,8 @@ schoolsRouter.get("/", async (req, res) => {
     try {
         const {search, page = 1, limit = 10} = req.query;
 
-        const currentPage = Math.max(1, +page);
-        const limitPerPage = Math.max(1, +limit);
+        const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+        const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
         const offset = (currentPage - 1) * limitPerPage;
 
         const filterConditions = [];
@@ -51,4 +52,31 @@ schoolsRouter.get("/", async (req, res) => {
         console.error("GET /schools error: ", error);
         res.status(500).json({error: "Failed to fetch schools"});
     }
-})
+});
+
+schoolsRouter.post("/", async (req, res) => {
+    try {
+        const {schoolName} = req.body;
+
+        if(typeof schoolName !== "string" || schoolName.trim().length === 0){
+            return res.status(400).json({ error: "The school name is required" });
+        }
+
+        const newSchool : NewSchool = {
+            id: randomUUID(),
+            schoolName: schoolName.trim(),
+        }
+
+        const [createdSchool] = await db
+            .insert(schools)
+            .values({...newSchool})
+            .returning({id: schools.id, schoolName: schools.schoolName});
+
+        res.status(201).json({
+            data: createdSchool
+        })
+    } catch (error) {
+        console.error("POST /schools error: ", error);
+        res.status(500).json({error: "Failed to create a school"});
+    }
+});
