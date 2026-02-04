@@ -1,11 +1,7 @@
 import { boolean, index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { timestamps } from "./timestamps";
 
 export const roleEnum = pgEnum("role", ["student", "teacher", "admin", "parent"]);
-
-const timestamps = {
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull()
-};
 
 export const user = pgTable("user", {
     id: text("id").primaryKey(),
