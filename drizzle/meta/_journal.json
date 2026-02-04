@@ -36,6 +36,13 @@
       "when": 1770231892591,
       "tag": "0004_wet_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1770232636481,
+      "tag": "0005_cold_imperial_guard",
+      "breakpoints": true
     }
   ]
 }

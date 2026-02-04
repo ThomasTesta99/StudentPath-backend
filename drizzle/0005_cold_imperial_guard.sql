@@ -1,0 +1,2 @@
+DROP INDEX "parent_student_links_unique";--> statement-breakpoint
+ALTER TABLE "parent_student_links" ADD CONSTRAINT "parent_student_links_parent_id_student_id_pk" PRIMARY KEY("parent_id","student_id");
