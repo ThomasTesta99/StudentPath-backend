@@ -80,7 +80,7 @@ termsRouter.post("/", async (req,res) => {
         if (typeof termName !== "string" || termName.trim().length === 0) {
             return res.status(400).json({ error: "termName is required" });        }
 
-        if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime)){
+        if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())){
             return res.status(400).json({error: "Must enter valid dates"});
         }
 
@@ -119,7 +119,7 @@ termsRouter.patch("/:id", async (req, res) => {
         if(typeof termName === "string"){
             const trimmed = termName.trim();
             if(trimmed.length === 0){
-                return res.status(400).json({error: "Must enter school name"});
+                return res.status(400).json({error: "Must enter term name"});
             }
             updates.termName = trimmed;
         }
