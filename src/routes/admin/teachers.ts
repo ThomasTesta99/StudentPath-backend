@@ -149,3 +149,23 @@ adminTeacherRouter.get("/:id", async (req, res) => {
         res.status(500).json({error: "There was an error getting the teacher profile"});
     }
 })
+
+adminTeacherRouter.delete("/:id/:schoolId", async (req, res) => {
+    try {
+        const {id, schoolId} = req.params;
+
+        const result = await db
+            .delete(teacherProfiles)
+            .where(and(eq(teacherProfiles.userId, id), eq(teacherProfiles.schoolId, schoolId)));
+
+        if(result.rowCount === 0){
+            return res.status(404).json({error: "No teacher profile found"});
+        }
+
+        return res.status(200).json({message: 'Teacher profile removed'});
+
+    } catch (error) {
+        console.error("DELETE /teacher profiles error: ", error);
+        res.status(500).json({error: "There was an error removing this user as a teacher"});
+    }
+})
