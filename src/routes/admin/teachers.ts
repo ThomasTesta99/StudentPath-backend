@@ -1,5 +1,5 @@
 import express from "express"
-import { enrollments, NewTeacherProfile, teacherProfiles, user } from "../../db/schema";
+import { enrollments, NewTeacherProfile, schools, teacherProfiles, user } from "../../db/schema";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 
@@ -113,5 +113,39 @@ adminTeacherRouter.get("/", async (req, res) => {
     } catch (error) {
         console.error("GET /teacherProfiles error: ", error);
         return res.status(500).json({error: "There was an error getting all the teahers"});
+    }
+})
+
+adminTeacherRouter.get("/:id", async (req, res) => {
+    try {
+        const {id: userId} = req.params;
+
+        const userResult = await db 
+            .select({
+                ...getTableColumns(teacherProfiles),
+                user: {
+                    ...getTableColumns(user)
+                },
+                school: {
+                    ...getTableColumns(schools)
+                }
+            })
+            .from(teacherProfiles)
+            .innerJoin(user, eq(teacherProfiles.userId, user.id))
+            .innerJoin(schools, eq(teacherProfiles.schoolId, schools.id))
+            .where(and(eq(teacherProfiles.userId, userId), eq(user.role, "teacher")))
+            .orderBy(desc(teacherProfiles.createdAt))
+
+        if(userResult.length === 0){
+            return res.status(404).json({error: "No user found"});
+        }
+
+        return res.status(200).json({
+            data: userResult,
+        })
+
+    } catch (error) {
+        console.error("GET /teacher profile error: ", error);
+        res.status(500).json({error: "There was an error getting the teacher profile"});
     }
 })
