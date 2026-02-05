@@ -74,6 +74,12 @@ termsRouter.post("/", async (req,res) => {
         const start = new Date(startDate);
         const end = new Date(endDate);
 
+        if (typeof schoolId !== "string" || schoolId.trim().length === 0) {
+            return res.status(400).json({ error: "schoolId is required" });
+        }
+        if (typeof termName !== "string" || termName.trim().length === 0) {
+            return res.status(400).json({ error: "termName is required" });        }
+
         if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime)){
             return res.status(400).json({error: "Must enter valid dates"});
         }
@@ -84,8 +90,8 @@ termsRouter.post("/", async (req,res) => {
 
         const newTerm: NewTerm = {
             id: randomUUID(), 
-            schoolId, 
-            termName, 
+            schoolId: schoolId.trim(), 
+            termName: termName.trim(), 
             startDate: start, 
             endDate: end,
             isActive: false, 
@@ -169,10 +175,11 @@ termsRouter.patch("/:id", async (req, res) => {
         const [updated] = await db
             .update(terms)
             .set(updates)
+            .where(eq(terms.id, id))
             .returning();
 
         if(!updated){
-            return res.status(404).json({error: "School not found"});
+            return res.status(404).json({error: "Term not found"});
         }
 
         return res.status(200).json({data: updated});
@@ -189,6 +196,7 @@ termsRouter.patch("/:id/activate", async (req, res) => {
         const [activated] = await db
             .update(terms)
             .set({isActive: true})
+            .where(eq(terms.id, id))
             .returning({termName:terms.termName, isActive: terms.isActive});
 
         if(!activated?.isActive){
