@@ -4,11 +4,12 @@ import { schools } from "./school";
 import { timestamps } from "./timestamps";
 
 export const teacherProfiles = pgTable("teacher_profiles", {
-    userId: text("user_id").primaryKey().references(() => user.id, {onDelete: "cascade"}),
+    userId: text("user_id").notNull().references(() => user.id, {onDelete: "cascade"}),
     schoolId: text("school_id").notNull().references(() => schools.id, {onDelete: "cascade"}),
     ...timestamps
 }, 
     (table) => ({
+        pk: primaryKey({ columns: [table.userId, table.schoolId] }),
         schoolIdIdx: index("teacher_profiles_school_id_idx").on(table.schoolId)
     })
 );

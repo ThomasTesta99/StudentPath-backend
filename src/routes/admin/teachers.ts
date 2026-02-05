@@ -1,7 +1,7 @@
 import express from "express"
-import { NewTeacherProfile, teacherProfiles, user } from "../../db/schema";
+import { enrollments, NewTeacherProfile, teacherProfiles, user } from "../../db/schema";
 import { db } from "../../db";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 
 export const adminTeacherRouter =express.Router();
 
@@ -26,7 +26,7 @@ adminTeacherRouter.post("/", async (req, res) => {
         const [existing] = await db
             .select({id: teacherProfiles.userId})
             .from(teacherProfiles)
-            .where(eq(teacherProfiles.userId, userId))
+            .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId)))
             .limit(1);
 
         if(existing){
@@ -47,5 +47,71 @@ adminTeacherRouter.post("/", async (req, res) => {
     } catch (error) {
         console.error("POST /admin/teacher error: ", error);
         return res.status(500).json({error: "There was an error creating the teacher"});
+    }
+})
+
+adminTeacherRouter.get("/", async (req, res) => {
+    try {
+        const {search, page = 1, limit = 10, schoolId} = req.query;
+        
+        const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+        const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
+        const offset = (currentPage - 1) * limitPerPage;
+
+        const filterConditions = [];
+        filterConditions.push(eq(user.role, "teacher"));
+
+        if(schoolId){
+            filterConditions.push(eq(teacherProfiles.schoolId, String(schoolId)));
+        }
+
+        if(search){
+            const s = String(search).trim();
+            if(s.length > 0){
+                filterConditions.push(
+                    or(
+                        ilike(user.name, `%${s}%`),
+                        ilike(user.email, `%${s}%`),
+                    )
+                )
+            }
+        }
+
+        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+
+        const countResult = await db
+            .select({count: sql<number>`count(*)`})
+            .from(teacherProfiles)
+            .innerJoin(user, eq(teacherProfiles.userId, user.id))
+            .where(whereClause);
+
+        const totalCount = countResult[0]?.count ?? 0;
+
+        const teachers = await db
+            .select({
+                ...getTableColumns(teacherProfiles),
+                user: {
+                    ...getTableColumns(user),
+                }
+            })
+            .from(teacherProfiles)
+            .innerJoin(user, eq(teacherProfiles.userId, user.id))
+            .where(whereClause)
+            .limit(limitPerPage)
+            .offset(offset)
+            .orderBy(desc(teacherProfiles.createdAt));
+
+        return res.status(201).json({
+            data: teachers,
+            pagination: {
+                page: currentPage, 
+                limit: limitPerPage, 
+                total: totalCount, 
+                totalPages: Math.ceil(totalCount / limitPerPage)
+            },
+        });
+    } catch (error) {
+        console.error("GET /teacherProfiles error: ", error);
+        return res.status(500).json({error: "There was an error getting all the teahers"});
     }
 })
