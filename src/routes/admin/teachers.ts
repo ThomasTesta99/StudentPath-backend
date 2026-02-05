@@ -20,18 +20,28 @@ adminTeacherRouter.post("/", async (req, res) => {
             .limit(1);
 
         if(!userResult[0]){
-            return res.status(400).json({error: "No user found"});
+            return res.status(400).json({error: "User not found or is not a teacher"});
         }
 
-        const [existing] = await db
-            .select({id: teacherProfiles.userId})
-            .from(teacherProfiles)
-            .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId)))
-            .limit(1);
+        // const schoolResult = await db
+        //     .select({id: schools.id})
+        //     .from(schools)
+        //     .where(eq(schools.id, schoolId))
+        //     .limit(1);
 
-        if(existing){
-            return res.status(409).json({error: "Teacher profile already exists"});
-        }
+        // if(!schoolResult[0]){
+        //     return res.status(400).json({error: "School not found"})
+        // }
+
+        // const [existing] = await db
+        //     .select({id: teacherProfiles.userId})
+        //     .from(teacherProfiles)
+        //     .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId)))
+        //     .limit(1);
+
+        // if(existing){
+        //     return res.status(409).json({error: "Teacher profile already exists"});
+        // }
 
         const newTeacher: NewTeacherProfile = {
             userId, 
@@ -101,7 +111,7 @@ adminTeacherRouter.get("/", async (req, res) => {
             .offset(offset)
             .orderBy(desc(teacherProfiles.createdAt));
 
-        return res.status(201).json({
+        return res.status(200).json({
             data: teachers,
             pagination: {
                 page: currentPage, 
@@ -112,7 +122,7 @@ adminTeacherRouter.get("/", async (req, res) => {
         });
     } catch (error) {
         console.error("GET /teacherProfiles error: ", error);
-        return res.status(500).json({error: "There was an error getting all the teahers"});
+        return res.status(500).json({error: "There was an error getting all the teachers"});
     }
 })
 
@@ -146,7 +156,7 @@ adminTeacherRouter.get("/:id", async (req, res) => {
 
     } catch (error) {
         console.error("GET /teacher profile error: ", error);
-        res.status(500).json({error: "There was an error getting the teacher profile"});
+        return res.status(500).json({error: "There was an error getting the teacher profile"});
     }
 })
 
@@ -166,6 +176,6 @@ adminTeacherRouter.delete("/:id/:schoolId", async (req, res) => {
 
     } catch (error) {
         console.error("DELETE /teacher profiles error: ", error);
-        res.status(500).json({error: "There was an error removing this user as a teacher"});
+        return res.status(500).json({error: "There was an error removing this user as a teacher"});
     }
 })
