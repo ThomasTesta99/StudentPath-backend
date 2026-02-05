@@ -1,7 +1,8 @@
 import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import express from 'express'
-import { terms } from '../../db/schema';
+import { NewTerm, terms } from '../../db/schema';
 import { db } from '../../db';
+import { randomUUID } from 'crypto';
 
 export const termsRouter = express.Router();
 
@@ -65,3 +66,39 @@ termsRouter.get("/", async (req, res) => {
         res.status(500).json({error: "There was an error getting terms"});
     }
 })
+
+termsRouter.post("/", async (req,res) => {
+    try {
+        const {schoolId, termName, startDate, endDate} = req.body;
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if(Number.isNaN(start.getTime()) || Number.isNaN(end.getTime)){
+            return res.status(400).json({error: "Must enter valid dates"});
+        }
+
+        if(start > end){
+            return res.status(400).json({error: "Start date must be before end date"});
+        }
+
+        const newTerm: NewTerm = {
+            id: randomUUID(), 
+            schoolId, 
+            termName, 
+            startDate: start, 
+            endDate: end,
+            isActive: false, 
+        }
+
+        const [createdTerm] = await db
+            .insert(terms)
+            .values(newTerm)
+            .returning()
+
+        return res.status(201).json({data: createdTerm});
+    } catch (error) {
+        console.error("POST /terms error: ", error);
+        res.status(500).json({error: "There was an error creating the term."});
+    }
+});
