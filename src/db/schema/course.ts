@@ -1,14 +1,17 @@
-import { index, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { index, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { schools, terms } from "./school";
 import { user } from "./auth";
 import { timestamps } from "./timestamps";
 
 export const departments = pgTable("departments", {
     id: text("id").primaryKey(), 
-    name: text("name").notNull(), 
+    name: text("name").notNull(),
+    schoolId: text("school_id").notNull().references(() => schools.id, { onDelete: "cascade" }),
     ...timestamps
 },
   (table) => ({
+    schoolNameUnique: uniqueIndex("departments_school_name_unique").on(table.schoolId, table.name),
+    schoolIdx: index("departments_school_id_idx").on(table.schoolId),
     nameIdx: index("departments_name_idx").on(table.name),
   })
 )

@@ -7,6 +7,8 @@ import { requireRole } from './middleware/requireRole';
 import { schoolsRouter } from './routes/admin/schools';
 import { termsRouter } from './routes/admin/terms';
 import { adminTeacherRouter} from './routes/admin/teachers';
+import { coursesRouter } from './routes/admin/courses';
+import { departmentsRouter } from './routes/admin/departments';
 
 const app = express();
 const PORT = 8000;
@@ -26,9 +28,16 @@ app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.use(express.json());
 
+// ADMIN ROUTES
 app.use("/api/admin/schools", requireAuth, requireRole(['admin']), schoolsRouter);
 app.use("/api/admin/terms", requireAuth, requireRole(["admin"]), termsRouter);
 app.use("/api/admin/teachers", requireAuth, requireRole(["admin"]), adminTeacherRouter);
+app.use("/api/admin/departments", requireAuth, requireRole(["admin"]), departmentsRouter);
+app.use("/api/admin/courses", requireAuth, requireRole(["admin"]), coursesRouter);
+
+
+
+
 
 app.get('/', async (req, res) => {
     res.send('Hello, welcome to the Classroom API');
