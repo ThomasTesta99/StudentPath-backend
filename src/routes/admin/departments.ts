@@ -2,7 +2,7 @@ import express from "express";
 import { departments, NewDepartment, schools } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
-import { and, desc, eq, getTableColumns, ilike, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, ne, sql } from "drizzle-orm";
 
 export const departmentsRouter = express.Router();
 
@@ -91,3 +91,69 @@ departmentsRouter.get("/", async (req,res)=> {
         return res.status(500).json({error: "There was an error getting the departments"})
     }
 })
+
+departmentsRouter.patch("/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+        const {departmentName} = req.body;
+
+        const updates: Partial<NewDepartment> = {};
+
+        if(typeof departmentName === "string"){
+            const trimmed = departmentName.trim();
+            if(trimmed.length === 0){
+                return res.status(400).json({error: "Must enter department name"});
+            }
+            updates.name = trimmed;
+        }
+
+        if(Object.keys(updates).length === 0){
+            return res.status(400).json({error: "No valid fields to update"});
+        }
+
+        const [existingDept] = await db
+            .select({ id: departments.id, schoolId: departments.schoolId })
+            .from(departments)
+            .where(eq(departments.id, id))
+            .limit(1);
+
+        if (!existingDept) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        if (updates.name) {
+            const [duplicate] = await db
+                .select({ id: departments.id })
+                .from(departments)
+                .where(
+                and(
+                    eq(departments.schoolId, existingDept.schoolId),
+                    ilike(departments.name, updates.name), 
+                    ne(departments.id, id)
+                )
+                )
+                .limit(1);
+
+            if (duplicate) {
+                return res.status(409).json({
+                error: "A department with that name already exists in this school",
+                });
+            }
+        }
+
+        const [updated] = await db
+            .update(departments)
+            .set(updates)
+            .where(eq(departments.id, id))
+            .returning();
+
+        if(!updated){
+            return res.status(404).json({error: "Department not found"});
+        }
+
+        return res.status(200).json({data: updated});
+    } catch (error) {
+        console.error("PATCH /departments error: ", error);
+        return res.status(500).json({error: "There was an error updating the department"});
+    }
+} )
