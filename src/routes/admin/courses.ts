@@ -135,7 +135,7 @@ coursesRouter.get("/", async (req ,res) => {
             .innerJoin(schools, eq(courses.schoolId, schools.id))
             .innerJoin(terms, eq(courses.termId, terms.id))
             .innerJoin(departments, eq(courses.departmentId, departments.id))
-            .leftJoin(user, eq(courses.teacherId, user.id))
+            .innerJoin(user, eq(courses.teacherId, user.id))
             .where(whereClause)
             .limit(limitPerPage)
             .offset(offset)
@@ -156,3 +156,41 @@ coursesRouter.get("/", async (req ,res) => {
     }
 })
 
+coursesRouter.get("/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+
+        const [course] = await db
+            .select({
+                ...getTableColumns(courses),
+                school: {
+                    ...getTableColumns(schools)
+                }, 
+                term: {
+                    ...getTableColumns(terms)
+                },
+                department: {
+                    ...getTableColumns(departments)
+                },
+                teacher: {
+                    ...getTableColumns(user)
+                }
+            })
+            .from(courses)
+            .innerJoin(schools, eq(courses.schoolId, schools.id))
+            .innerJoin(terms, eq(courses.termId, terms.id))
+            .innerJoin(departments, eq(courses.departmentId, departments.id))
+            .innerJoin(user, eq(courses.teacherId, user.id))
+            .where(eq(courses.id, id))
+            .limit(1);
+
+        if(!course){
+            return res.status(404).json({error: "There was an error getting the course"})
+        }
+
+        return res.status(200).json({course: course});
+    } catch (error) {
+        console.error("GET /courses/id error: ", error);
+        return res.status(500).json({error: "There was an error getting the course"});
+    }
+})
