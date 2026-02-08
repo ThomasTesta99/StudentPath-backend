@@ -2,7 +2,7 @@ import express from "express"
 import { courses, departments, NewCourse, schools, terms, user } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 
 export const coursesRouter = express.Router();
 
@@ -80,6 +80,79 @@ coursesRouter.post("/", async (req, res) => {
     }
 })
 
-coursesRouter.get("/", async (req ,res ) => {
-    
+coursesRouter.get("/", async (req ,res) => {
+    try {
+        const {search, page = 1, limit = 10, schoolId} = req.query;
+        
+        const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+        const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
+        const offset = (currentPage - 1) * limitPerPage;
+
+        const filterConditions = [];
+        if (!schoolId || String(schoolId).trim().length === 0) {
+            return res.status(400).json({ error: "schoolId is required" });
+        }
+        filterConditions.push(eq(courses.schoolId, String(schoolId)));
+
+        if(search){
+            const s = String(search).trim();
+            if(s.length > 0){
+                filterConditions.push(
+                    or(
+                        ilike(courses.name, `%${s}%`),
+                        ilike(courses.code, `%${s}%`),
+                    )
+                )
+            }
+        }
+
+        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+
+        const countResult = await db
+            .select({count: sql<number>`count(*)`})
+            .from(courses)
+            .where(whereClause);
+        
+        const totalCount = countResult[0]?.count ?? 0;
+
+        const courseList = await db
+            .select({
+                ...getTableColumns(courses), 
+                school: {
+                    ...getTableColumns(schools)
+                },
+                term: {
+                    ...getTableColumns(terms)
+                },
+                department: {
+                    ...getTableColumns(departments)
+                }, 
+                teacher: {
+                    ...getTableColumns(user)
+                }
+            })
+            .from(courses)
+            .innerJoin(schools, eq(courses.schoolId, schools.id))
+            .innerJoin(terms, eq(courses.termId, terms.id))
+            .innerJoin(departments, eq(courses.departmentId, departments.id))
+            .leftJoin(user, eq(courses.teacherId, user.id))
+            .where(whereClause)
+            .limit(limitPerPage)
+            .offset(offset)
+            .orderBy(desc(courses.createdAt));
+
+        return res.status(200).json({
+            data: courseList, 
+            pagination: {
+                page: currentPage,
+                limit: limitPerPage,
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limitPerPage),
+            }, 
+        })
+    } catch (error) {
+        console.error("GET /courses error: ", error);
+        return res.status(500).json({error: "There was an error getting all courses"});
+    }
 })
+
