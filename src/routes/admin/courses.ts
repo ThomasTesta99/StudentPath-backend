@@ -251,3 +251,21 @@ coursesRouter.patch("/:id", async (req, res) => {
         return res.status(500).json({error: "There was an error updating the course"});
     }
 })
+
+coursesRouter.delete("/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+
+        const [deleted] = await db
+            .delete(courses)
+            .where(eq(courses.id, id))
+            .returning({id: courses.id, name: courses.name, code: courses.code});
+
+        if(!deleted) return res.status(404).json({error: "Course not found"});
+
+        return res.status(200).json({deletedCourse: deleted});
+    } catch (error) {
+        console.error("DELETE /courses error: ", error);
+        return res.status(500).json({error: "There was an error deleting the course"});
+    }
+})
