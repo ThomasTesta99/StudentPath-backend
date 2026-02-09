@@ -3,6 +3,22 @@ import { user } from "./auth";
 import { schools } from "./school";
 import { timestamps } from "./timestamps";
 
+export const adminProfiles = pgTable(
+  "admin_profiles",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    schoolId: text("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (table) => ({
+    schoolIdIdx: index("admin_profiles_school_id_idx").on(table.schoolId),
+  })
+);
+
 export const teacherProfiles = pgTable("teacher_profiles", {
     userId: text("user_id").notNull().references(() => user.id, {onDelete: "cascade"}),
     schoolId: text("school_id").notNull().references(() => schools.id, {onDelete: "cascade"}),
@@ -54,6 +70,9 @@ export const parentStudentLinks = pgTable("parent_student_links", {
 
     })
 )
+
+export type AdminProfile = typeof adminProfiles.$inferSelect;
+export type NewAdminProfile = typeof adminProfiles.$inferInsert;
 
 export type TeacherProfile = typeof teacherProfiles.$inferSelect;
 export type NewTeacherProfile = typeof teacherProfiles.$inferInsert;

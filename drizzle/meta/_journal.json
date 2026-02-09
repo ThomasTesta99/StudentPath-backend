@@ -85,6 +85,13 @@
       "when": 1770325828562,
       "tag": "0011_glossy_bromley",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1770679906884,
+      "tag": "0012_orange_jack_power",
+      "breakpoints": true
     }
   ]
 }

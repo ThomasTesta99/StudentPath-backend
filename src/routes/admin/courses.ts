@@ -3,12 +3,15 @@ import { courses, departments, NewCourse, schools, teacherProfiles, terms, user 
 import { randomUUID } from "crypto";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import { getSchoolIdForAdmin } from "../../lib/utils";
 
 export const coursesRouter = express.Router();
 
 coursesRouter.post("/", async (req, res) => {
     try {
-        const {schoolId, termId, teacherId, departmentId, name, gradeLevel, code, description} = req.body;
+        const schoolId = await getSchoolIdForAdmin();
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+        const {termId, teacherId, departmentId, name, gradeLevel, code, description} = req.body;
 
         const required = {schoolId, termId, teacherId, departmentId, name, gradeLevel, code, description};
         for(const [k,v] of Object.entries(required)){
@@ -36,7 +39,7 @@ coursesRouter.post("/", async (req, res) => {
         if(!school) return res.status(400).json({error: "Invalid school"});
 
         const [term] = await db
-            .select({id: terms.id, schoolId: schools.id})
+            .select({id: terms.id, schoolId: terms.schoolId})
             .from(terms)
             .where(eq(terms.id, newCourse.termId))
             .limit(1);
@@ -82,7 +85,9 @@ coursesRouter.post("/", async (req, res) => {
 
 coursesRouter.get("/", async (req ,res) => {
     try {
-        const {search, page = 1, limit = 10, schoolId} = req.query;
+        const schoolId = await getSchoolIdForAdmin();
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+        const {search, page = 1, limit = 10} = req.query;
         
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
@@ -159,6 +164,8 @@ coursesRouter.get("/", async (req ,res) => {
 coursesRouter.get("/:id", async (req, res) => {
     try {
         const {id} = req.params;
+        const schoolId = await getSchoolIdForAdmin();
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const [course] = await db
             .select({
@@ -181,7 +188,7 @@ coursesRouter.get("/:id", async (req, res) => {
             .innerJoin(terms, eq(courses.termId, terms.id))
             .innerJoin(departments, eq(courses.departmentId, departments.id))
             .innerJoin(user, eq(courses.teacherId, user.id))
-            .where(eq(courses.id, id))
+            .where(and(eq(courses.id, id), eq(courses.schoolId, schoolId)))
             .limit(1);
 
         if(!course){
@@ -200,6 +207,9 @@ coursesRouter.patch("/:id", async (req, res) => {
         const {id} = req.params;
         const {termId, teacherId, departmentId, name, gradeLevel, code, description} = req.body;
 
+        const schoolId = await getSchoolIdForAdmin();
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
         const updates: Partial<NewCourse> = {};
 
         if(typeof termId === "string" && termId.trim().length > 0) updates.termId = termId.trim();
@@ -217,7 +227,7 @@ coursesRouter.patch("/:id", async (req, res) => {
         const [existingCourse] = await db
             .select({id: courses.id})
             .from(courses)
-            .where(eq(courses.id, id))
+            .where(and(eq(courses.id, id), eq(courses.schoolId, schoolId)))
             .limit(1);
 
         if(!existingCourse) return res.status(404).json({error: "Course not found"});
@@ -240,7 +250,7 @@ coursesRouter.patch("/:id", async (req, res) => {
         const [updated] = await db
             .update(courses)
             .set(updates)
-            .where(eq(courses.id, id))
+            .where(and(eq(courses.id, id), eq(courses.schoolId, schoolId)))
             .returning();
 
         if(!updated) return res.status(400).json({error: "There was an error updating the course"});
@@ -255,10 +265,13 @@ coursesRouter.patch("/:id", async (req, res) => {
 coursesRouter.delete("/:id", async (req, res) => {
     try {
         const {id} = req.params;
+        const schoolId = await getSchoolIdForAdmin();
+    if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
 
         const [deleted] = await db
             .delete(courses)
-            .where(eq(courses.id, id))
+            .where(and(eq(courses.id, id), eq(courses.schoolId, schoolId)))
             .returning({id: courses.id, name: courses.name, code: courses.code});
 
         if(!deleted) return res.status(404).json({error: "Course not found"});
