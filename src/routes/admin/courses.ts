@@ -9,7 +9,7 @@ export const coursesRouter = express.Router();
 
 coursesRouter.post("/", async (req, res) => {
     try {
-        const schoolId = await getSchoolIdForAdmin();
+        const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
         const {termId, teacherId, departmentId, name, gradeLevel, code, description} = req.body;
 
@@ -85,7 +85,7 @@ coursesRouter.post("/", async (req, res) => {
 
 coursesRouter.get("/", async (req ,res) => {
     try {
-        const schoolId = await getSchoolIdForAdmin();
+        const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
         const {search, page = 1, limit = 10} = req.query;
         
@@ -164,7 +164,7 @@ coursesRouter.get("/", async (req ,res) => {
 coursesRouter.get("/:id", async (req, res) => {
     try {
         const {id} = req.params;
-        const schoolId = await getSchoolIdForAdmin();
+        const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const [course] = await db
@@ -207,7 +207,7 @@ coursesRouter.patch("/:id", async (req, res) => {
         const {id} = req.params;
         const {termId, teacherId, departmentId, name, gradeLevel, code, description} = req.body;
 
-        const schoolId = await getSchoolIdForAdmin();
+        const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const updates: Partial<NewCourse> = {};
@@ -265,7 +265,7 @@ coursesRouter.patch("/:id", async (req, res) => {
 coursesRouter.delete("/:id", async (req, res) => {
     try {
         const {id} = req.params;
-        const schoolId = await getSchoolIdForAdmin();
+        const schoolId = await getSchoolIdForAdmin(req);
     if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
 
