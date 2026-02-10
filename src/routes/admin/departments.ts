@@ -3,17 +3,24 @@ import { departments, NewDepartment, schools } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, ne, sql } from "drizzle-orm";
+import { getSchoolIdForAdmin } from "../../lib/utils";
 
 export const departmentsRouter = express.Router();
 
 departmentsRouter.post("/", async (req, res) => {
     try {
-        const {name, schoolId} = req.body;
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+        
+        const {name} = req.body;
+        if (typeof name !== "string" || name.trim().length === 0) {
+            return res.status(400).json({ error: "name is required" });
+        }
 
         const newDepartment: NewDepartment = {
             id: randomUUID(),
             name: name.trim(),
-            schoolId: schoolId,
+            schoolId,
         };
 
         const [result] = await db
@@ -25,23 +32,25 @@ departmentsRouter.post("/", async (req, res) => {
             return res.status(400).json({error: "There was an error creating the department"})
         }
 
-        return res.status(200).json({data: result});
+        return res.status(201).json({data: result});
     } catch (error) {
         console.error("POST departments error: ", error);
-        return res.status(500).json({error: "There was an error creating the department"});
     }
+    return res.status(500).json({error: "There was an error creating the department"});
 })
 
 departmentsRouter.get("/", async (req,res)=> {
     try {
-        const {search, page = 1, limit = 10, schoolId} = req.query;
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+        const {search, page = 1, limit = 10} = req.query;
         
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
         const offset = (currentPage - 1) * limitPerPage;
 
         const filterConditions = [];
-        filterConditions.push(eq(departments.schoolId, String(schoolId)));
+        filterConditions.push(eq(departments.schoolId, schoolId));
 
         if(search){
             const s = String(search).trim();
@@ -57,7 +66,6 @@ departmentsRouter.get("/", async (req,res)=> {
         const departmentsCount = await db
             .select({count: sql<number>`count(*)`})
             .from(departments)
-            .innerJoin(schools, eq(schools.id, departments.schoolId))
             .where(whereClause);
 
         const totalCount = departmentsCount[0]?.count ?? 0;
@@ -97,6 +105,9 @@ departmentsRouter.patch("/:id", async (req, res) => {
         const {id} = req.params;
         const {departmentName} = req.body;
 
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
         const updates: Partial<NewDepartment> = {};
 
         if(typeof departmentName === "string"){
@@ -114,7 +125,7 @@ departmentsRouter.patch("/:id", async (req, res) => {
         const [existingDept] = await db
             .select({ id: departments.id, schoolId: departments.schoolId })
             .from(departments)
-            .where(eq(departments.id, id))
+            .where(and(eq(departments.id, id), eq(departments.schoolId, schoolId)))
             .limit(1);
 
         if (!existingDept) {
@@ -144,7 +155,7 @@ departmentsRouter.patch("/:id", async (req, res) => {
         const [updated] = await db
             .update(departments)
             .set(updates)
-            .where(eq(departments.id, id))
+            .where(and(eq(departments.id, id), eq(departments.schoolId, schoolId)))
             .returning();
 
         if(!updated){

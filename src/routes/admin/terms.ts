@@ -3,6 +3,7 @@ import express from 'express'
 import { NewTerm, terms } from '../../db/schema';
 import { db } from '../../db';
 import { randomUUID } from 'crypto';
+import { getSchoolIdForAdmin } from '../../lib/utils';
 
 export const termsRouter = express.Router();
 
@@ -16,6 +17,9 @@ function parseBooleanQuery(value: unknown): boolean | undefined {
 
 termsRouter.get("/", async (req, res) => {
     try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
         const {search, page = 1, limit = 10, active} = req.query;
 
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
@@ -69,14 +73,14 @@ termsRouter.get("/", async (req, res) => {
 
 termsRouter.post("/", async (req,res) => {
     try {
-        const {schoolId, termName, startDate, endDate} = req.body;
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {termName, startDate, endDate} = req.body;
 
         const start = new Date(startDate);
         const end = new Date(endDate);
 
-        if (typeof schoolId !== "string" || schoolId.trim().length === 0) {
-            return res.status(400).json({ error: "schoolId is required" });
-        }
         if (typeof termName !== "string" || termName.trim().length === 0) {
             return res.status(400).json({ error: "termName is required" });        }
 
@@ -90,7 +94,7 @@ termsRouter.post("/", async (req,res) => {
 
         const newTerm: NewTerm = {
             id: randomUUID(), 
-            schoolId: schoolId.trim(), 
+            schoolId, 
             termName: termName.trim(), 
             startDate: start, 
             endDate: end,
@@ -111,6 +115,9 @@ termsRouter.post("/", async (req,res) => {
 
 termsRouter.patch("/:id", async (req, res) => {
     try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
         const {id} = req.params;
         const {termName, startDate, endDate} = req.body;
 
@@ -175,7 +182,7 @@ termsRouter.patch("/:id", async (req, res) => {
         const [updated] = await db
             .update(terms)
             .set(updates)
-            .where(eq(terms.id, id))
+            .where(and(eq(terms.id, id), eq(terms.schoolId, schoolId)))
             .returning();
 
         if(!updated){
@@ -191,12 +198,15 @@ termsRouter.patch("/:id", async (req, res) => {
 
 termsRouter.patch("/:id/activate", async (req, res) => {
     try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+        
         const {id} = req.params;
 
         const [activated] = await db
             .update(terms)
             .set({isActive: true})
-            .where(eq(terms.id, id))
+            .where(and(eq(terms.id, id), eq(terms.schoolId, schoolId)))
             .returning({termName:terms.termName, isActive: terms.isActive});
 
         if(!activated?.isActive){

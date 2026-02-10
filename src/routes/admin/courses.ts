@@ -55,14 +55,12 @@ coursesRouter.post("/", async (req, res) => {
         if(department.schoolId !== newCourse.schoolId) return res.status(400).json({error: "Department does not belong to this school"});
         
         const [teacher] = await db
-            .select({id: user.id, role: user.role})
-            .from(user)
-            .where(eq(user.id, newCourse.teacherId))
+            .select({userId: teacherProfiles.userId})
+            .from(teacherProfiles)
+            .where(and(eq(user.id, newCourse.teacherId), eq(teacherProfiles.schoolId, schoolId)))
             .limit(1);
-        if(!teacher) return res.status(400).json({error: "Invalid teacherId"});
-        if(teacher.role !== "teacher"){
-            return res.status(400).json({error: "User must be a teacher to be assinged a course instructor."});
-        }
+        if(!teacher) return res.status(400).json({error: "Invalid teacherId/ does not belong to school"});
+        
         
 
         const result = await db
@@ -233,18 +231,18 @@ coursesRouter.patch("/:id", async (req, res) => {
         if(!existingCourse) return res.status(404).json({error: "Course not found"});
 
         if(updates.termId){
-            const [term] = await db.select({id: terms.id}).from(terms).where(eq(terms.id, updates.termId)).limit(1);;
-            if(!term) return res.status(404).json({error: "invalid Term"});
+            const [term] = await db.select({id: terms.id}).from(terms).where(and(eq(terms.id, updates.termId), eq(terms.schoolId, schoolId))).limit(1);;
+            if(!term) return res.status(404).json({error: "invalid Term/Does not belong to this school"});
         }
 
         if(updates.departmentId){
-            const [department] = await db.select({id: departments.id}).from(departments).where(eq(departments.id, updates.departmentId)).limit(1);;
-            if(!department) return res.status(404).json({error: "invalid department"});
+            const [department] = await db.select({id: departments.id}).from(departments).where(and(eq(departments.id, updates.departmentId), eq(departments.schoolId, schoolId))).limit(1);;
+            if(!department) return res.status(404).json({error: "invalid department/does not belong to this school"});
         }
 
         if(updates.teacherId){
-            const [teacher] = await db.select({id: teacherProfiles.userId}).from(teacherProfiles).where(eq(teacherProfiles.userId, updates.teacherId)).limit(1);;
-            if(!teacher) return res.status(404).json({error: "Invalid teacher"})
+            const [teacher] = await db.select({id: teacherProfiles.userId}).from(teacherProfiles).where(and(eq(teacherProfiles.userId, updates.teacherId), eq(teacherProfiles.schoolId, schoolId))).limit(1);;
+            if(!teacher) return res.status(404).json({error: "Invalid teacher/does not belong to this school"})
         }
 
         const [updated] = await db

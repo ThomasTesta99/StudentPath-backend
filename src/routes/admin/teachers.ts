@@ -2,46 +2,40 @@ import express from "express"
 import { enrollments, NewTeacherProfile, schools, teacherProfiles, user } from "../../db/schema";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import { getSchoolIdForAdmin } from "../../lib/utils";
 
 export const adminTeacherRouter =express.Router();
 
 adminTeacherRouter.post("/", async (req, res) => {
     try {
-        const {userId, schoolId} = req.body;
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
-        if(!userId || !schoolId){
-            return res.status(400).json({error: "UserId and SchoolId required"});
+        const {userId} = req.body;
+
+        if (typeof userId !== "string" || userId.trim().length === 0) {
+            return res.status(400).json({ error: "userId is required" });
         }
 
-        const userResult = await db
+        const [userResult] = await db
             .select({id: user.id})
             .from(user)
             .where(and(eq(user.id, userId), eq(user.role, "teacher")))
             .limit(1);
 
-        if(!userResult[0]){
+        if(!userResult){
             return res.status(400).json({error: "User not found or is not a teacher"});
         }
 
-        // const schoolResult = await db
-        //     .select({id: schools.id})
-        //     .from(schools)
-        //     .where(eq(schools.id, schoolId))
-        //     .limit(1);
+        const [existing] = await db
+            .select({id: teacherProfiles.userId})
+            .from(teacherProfiles)
+            .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId)))
+            .limit(1);
 
-        // if(!schoolResult[0]){
-        //     return res.status(400).json({error: "School not found"})
-        // }
-
-        // const [existing] = await db
-        //     .select({id: teacherProfiles.userId})
-        //     .from(teacherProfiles)
-        //     .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId)))
-        //     .limit(1);
-
-        // if(existing){
-        //     return res.status(409).json({error: "Teacher profile already exists"});
-        // }
+        if(existing){
+            return res.status(409).json({error: "Teacher profile already exists"});
+        }
 
         const newTeacher: NewTeacherProfile = {
             userId, 
@@ -62,18 +56,19 @@ adminTeacherRouter.post("/", async (req, res) => {
 
 adminTeacherRouter.get("/", async (req, res) => {
     try {
-        const {search, page = 1, limit = 10, schoolId} = req.query;
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {search, page = 1, limit = 10} = req.query;
         
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
         const offset = (currentPage - 1) * limitPerPage;
 
         const filterConditions = [];
+        filterConditions.push(eq(teacherProfiles.schoolId, schoolId));
         filterConditions.push(eq(user.role, "teacher"));
 
-        if(schoolId){
-            filterConditions.push(eq(teacherProfiles.schoolId, String(schoolId)));
-        }
 
         if(search){
             const s = String(search).trim();
@@ -128,6 +123,9 @@ adminTeacherRouter.get("/", async (req, res) => {
 
 adminTeacherRouter.get("/:id", async (req, res) => {
     try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
         const {id: userId} = req.params;
 
         const userResult = await db 
@@ -143,7 +141,7 @@ adminTeacherRouter.get("/:id", async (req, res) => {
             .from(teacherProfiles)
             .innerJoin(user, eq(teacherProfiles.userId, user.id))
             .innerJoin(schools, eq(teacherProfiles.schoolId, schools.id))
-            .where(and(eq(teacherProfiles.userId, userId), eq(user.role, "teacher")))
+            .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId), eq(user.role, "teacher")))
             .orderBy(desc(teacherProfiles.createdAt))
 
         if(userResult.length === 0){
