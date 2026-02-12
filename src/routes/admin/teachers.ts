@@ -128,7 +128,7 @@ adminTeacherRouter.get("/:id", async (req, res) => {
 
         const {id: userId} = req.params;
 
-        const userResult = await db 
+        const [teacher] = await db 
             .select({
                 ...getTableColumns(teacherProfiles),
                 user: {
@@ -143,13 +143,14 @@ adminTeacherRouter.get("/:id", async (req, res) => {
             .innerJoin(schools, eq(teacherProfiles.schoolId, schools.id))
             .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId), eq(user.role, "teacher")))
             .orderBy(desc(teacherProfiles.createdAt))
+            .limit(1);
 
-        if(userResult.length === 0){
+        if(!teacher){
             return res.status(404).json({error: "No user found"});
         }
 
         return res.status(200).json({
-            data: userResult,
+            data: teacher,
         })
 
     } catch (error) {

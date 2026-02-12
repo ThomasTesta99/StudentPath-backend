@@ -1,7 +1,7 @@
 import express from "express"
 import { getSchoolIdForAdmin } from "../../lib/utils";
 import { auth } from "../../lib/auth";
-import { NewStudentProfile, studentProfiles, user } from "../../db/schema";
+import { NewStudentProfile, schools, studentProfiles, user } from "../../db/schema";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 
@@ -113,10 +113,14 @@ adminStudentsRouter.get("/", async (req, res) => {
                 ...getTableColumns(studentProfiles),
                 user: {
                     ...getTableColumns(user)
+                },
+                school: {
+                    ...getTableColumns(schools)
                 }
             })
             .from(studentProfiles)
             .innerJoin(user, eq(studentProfiles.userId, user.id))
+            .innerJoin(schools, eq(studentProfiles.schoolId, schoolId))
             .where(whereClause)
             .limit(limitPerPage)
             .offset(offset)
@@ -134,5 +138,35 @@ adminStudentsRouter.get("/", async (req, res) => {
     } catch (error) {
         console.error("GET /students error: ", error);
         return res.status(500).json({error: "There was an error getting students"});
+    }
+})
+
+adminStudentsRouter.get("/:userId", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+        
+        const {userId} = req.params;
+
+        const [student] = await db
+            .select({
+                ...getTableColumns(studentProfiles),
+                user: {
+                    ...getTableColumns(user)
+                }
+            })
+            .from(studentProfiles)
+            .innerJoin(user, eq(studentProfiles.userId,user.id))
+            .where(and(eq(studentProfiles.userId, userId), eq(studentProfiles.schoolId, schoolId)))
+            .limit(1);
+
+        if(!student){
+            return res.status(404).json({error: "Student not found"});
+        }
+
+        return res.status(200).json({data: student});
+    } catch (error) {
+       console.error("GET /students error: ", error);
+       return res.status(500).json({error: "There was an error getting the student"}); 
     }
 })

@@ -190,7 +190,7 @@ coursesRouter.get("/:id", async (req, res) => {
             return res.status(404).json({error: "There was an error getting the course"})
         }
 
-        return res.status(200).json({course: course});
+        return res.status(200).json({data: course});
     } catch (error) {
         console.error("GET /courses/id error: ", error);
         return res.status(500).json({error: "There was an error getting the course"});
