@@ -3,7 +3,7 @@ import { getSchoolIdForAdmin } from "../../lib/utils";
 import { auth } from "../../lib/auth";
 import { NewStudentProfile, schools, studentProfiles, user } from "../../db/schema";
 import { db } from "../../db";
-import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, ne, or, sql } from "drizzle-orm";
 
 export const adminStudentsRouter = express.Router();
 
@@ -120,7 +120,7 @@ adminStudentsRouter.get("/", async (req, res) => {
             })
             .from(studentProfiles)
             .innerJoin(user, eq(studentProfiles.userId, user.id))
-            .innerJoin(schools, eq(studentProfiles.schoolId, schoolId))
+            .innerJoin(schools, eq(studentProfiles.schoolId, schools.id))
             .where(whereClause)
             .limit(limitPerPage)
             .offset(offset)
@@ -168,5 +168,57 @@ adminStudentsRouter.get("/:userId", async (req, res) => {
     } catch (error) {
        console.error("GET /students error: ", error);
        return res.status(500).json({error: "There was an error getting the student"}); 
+    }
+})
+
+adminStudentsRouter.patch("/:userId", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {userId} = req.params;
+        const {gradeLevel, dob, osis} = req.body;
+
+        const updates: Partial<NewStudentProfile> = {};
+        
+        if(typeof gradeLevel === "string" && gradeLevel.trim().length > 0) updates.gradeLevel = gradeLevel.trim();
+        if(typeof dob === "string" && dob.trim().length > 0){
+            const d = new Date(dob);
+            if (Number.isNaN(d.getTime())) {
+                return res.status(400).json({ error: "dob must be a valid date" });
+            }
+            updates.dob = dob.trim();
+        }
+        if(typeof osis === "string" && osis.trim().length > 0) updates.osis = osis.trim();
+
+        if(updates.osis){
+            const existingOsis = await db
+                .select({count: sql<number>`count(*)`})
+                .from(studentProfiles)
+                .where(and(eq(studentProfiles.schoolId, schoolId), eq(studentProfiles.osis, updates.osis), ne(studentProfiles.userId, userId)));
+            
+            if(existingOsis[0]?.count && existingOsis[0]?.count > 0){
+                return res.status(400).json({error: "OSIS already asigned to a student"});
+            }
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ error: "No valid fields provided" });
+        }
+
+        const [updatedProfile] = await db
+            .update(studentProfiles)
+            .set(updates)
+            .where(and(eq(studentProfiles.userId, userId), eq(studentProfiles.schoolId, schoolId)))
+            .returning();
+
+        if(!updatedProfile){
+            return res.status(400).json({error: "Student Profile not found"});
+        }
+
+        return res.status(200).json({data: updatedProfile});
+    } catch (error) {
+        console.error("PATCH /students error: ", error);
+        return res.status(500).json({error: "Failure to update student profile"});
     }
 })
