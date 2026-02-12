@@ -36,10 +36,10 @@ termsRouter.get("/", async (req, res) => {
 
         const activeBool = parseBooleanQuery(active);
         if (activeBool !== undefined) {
-        filterConditions.push(eq(terms.isActive, activeBool));
+            filterConditions.push(eq(terms.isActive, activeBool));
         }
 
-        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+        const whereClause = and(...filterConditions);
 
         const countResult = await db
             .select({count: sql<number>`count(*)`})

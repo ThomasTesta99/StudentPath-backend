@@ -61,7 +61,7 @@ departmentsRouter.get("/", async (req,res)=> {
             }
         }
 
-        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+        const whereClause = and(...filterConditions);
 
         const departmentsCount = await db
             .select({count: sql<number>`count(*)`})

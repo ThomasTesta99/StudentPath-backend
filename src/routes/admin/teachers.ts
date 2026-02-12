@@ -82,7 +82,7 @@ adminTeacherRouter.get("/", async (req, res) => {
             }
         }
 
-        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+        const whereClause = and(...filterConditions);
 
         const countResult = await db
             .select({count: sql<number>`count(*)`})

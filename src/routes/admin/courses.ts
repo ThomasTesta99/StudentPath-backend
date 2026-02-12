@@ -92,9 +92,6 @@ coursesRouter.get("/", async (req ,res) => {
         const offset = (currentPage - 1) * limitPerPage;
 
         const filterConditions = [];
-        if (!schoolId || String(schoolId).trim().length === 0) {
-            return res.status(400).json({ error: "schoolId is required" });
-        }
         filterConditions.push(eq(courses.schoolId, String(schoolId)));
 
         if(search){
@@ -109,7 +106,7 @@ coursesRouter.get("/", async (req ,res) => {
             }
         }
 
-        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+        const whereClause = and(...filterConditions);
 
         const countResult = await db
             .select({count: sql<number>`count(*)`})

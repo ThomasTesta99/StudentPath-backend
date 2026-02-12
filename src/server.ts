@@ -9,6 +9,7 @@ import { termsRouter } from './routes/admin/terms';
 import { adminTeacherRouter} from './routes/admin/teachers';
 import { coursesRouter } from './routes/admin/courses';
 import { departmentsRouter } from './routes/admin/departments';
+import { adminStudentsRouter } from './routes/admin/students';
 
 const app = express();
 const PORT = 8000;
@@ -34,7 +35,7 @@ app.use("/api/admin/terms", requireAuth, requireRole(["admin"]), termsRouter);
 app.use("/api/admin/teachers", requireAuth, requireRole(["admin"]), adminTeacherRouter);
 app.use("/api/admin/departments", requireAuth, requireRole(["admin"]), departmentsRouter);
 app.use("/api/admin/courses", requireAuth, requireRole(["admin"]), coursesRouter);
-
+app.use("/api/admin/students", requireAuth, requireRole(["admin"]), adminStudentsRouter);
 
 
 
