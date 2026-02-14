@@ -48,7 +48,6 @@ adminTeacherRouter.post("/", async (req, res) => {
 
         return res.status(201).json({data: {
             user: newUser.user, 
-            temperaryPassword: password,
             teacherProfile: teacherResult
         }});
 
@@ -194,19 +193,25 @@ adminTeacherRouter.get("/:id", async (req, res) => {
     }
 })
 
-adminTeacherRouter.delete("/:id/:schoolId", async (req, res) => {
+adminTeacherRouter.delete("/:userId", async (req, res) => {
     try {
-        const {id, schoolId} = req.params;
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
-        const result = await db
-            .delete(teacherProfiles)
-            .where(and(eq(teacherProfiles.userId, id), eq(teacherProfiles.schoolId, schoolId)));
+        const {userId} = req.params;
 
-        if(result.rowCount === 0){
+        const result = await auth.api.removeUser({
+            body:{
+                userId: userId, 
+            },
+            headers: req.headers
+        })
+
+        if(!result.success){
             return res.status(404).json({error: "No teacher profile found"});
         }
 
-        return res.status(200).json({message: 'Teacher profile removed'});
+        return res.status(200).json({message: 'Teacher has been deleted'});
 
     } catch (error) {
         console.error("DELETE /teacher profiles error: ", error);

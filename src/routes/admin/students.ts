@@ -243,8 +243,15 @@ adminStudentsRouter.delete("/:userId", async (req, res) => {
         const deleteUser = await auth.api.removeUser({
             body: {
                 userId
-            }
+            },
+            headers: req.headers,
         })
+
+        if(deleteUser.success){
+            return res.status(200).json({message: `Successfully deleted user ${userId}`});
+        }else{
+            return res.status(400).json({error: "Failed to delete student."});
+        }
     } catch (error) {
         console.error("DELETE /students error: ", error);
         return res.status(500).json({error: "There was an error deleting the student"});
