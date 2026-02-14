@@ -61,6 +61,10 @@ adminStudentsRouter.post("/", async (req, res) => {
             .returning();
 
         if(!createdProfile){
+            await auth.api.removeUser({
+                body: {userId: user.id}, 
+                headers: req.rawHeaders,
+            })
             return res.status(400).json({error: "There was an error creating a student profile"});
         }
 
@@ -190,7 +194,12 @@ adminStudentsRouter.patch("/:userId", async (req, res) => {
             }
             updates.dob = dob.trim();
         }
-        if(typeof osis === "string" && osis.trim().length > 0) updates.osis = osis.trim();
+        if(typeof osis === "string" && osis.trim().length > 0) {
+            if (!/^\d{9}$/.test(osis.trim())) {
+                return res.status(400).json({ error: "osis must be exactly 9 digits" });
+            }
+            updates.osis = osis.trim();
+        }
 
         if(updates.osis){
             const existingOsis = await db
@@ -231,12 +240,13 @@ adminStudentsRouter.delete("/:userId", async (req, res) => {
 
         const {userId} = req.params;
 
-        const [deletedProfile] = await db
-            .delete(studentProfiles)
+        const [existing] = await db
+            .select({userId: studentProfiles.userId})
+            .from(studentProfiles)
             .where(and(eq(studentProfiles.userId, userId), eq(studentProfiles.schoolId, schoolId)))
-            .returning();
+            .limit(1);
 
-        if(!deletedProfile){
+        if(!existing){
             return res.status(400).json({error: "No student profile found"});
         }
 

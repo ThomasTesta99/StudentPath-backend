@@ -14,10 +14,6 @@ adminTeacherRouter.post("/", async (req, res) => {
 
         const {name, email, password} = req.body;
 
-        // if (typeof userId !== "string" || userId.trim().length === 0) {
-        //     return res.status(400).json({ error: "userId is required" });
-        // }
-
         const newUser = await auth.api.createUser({
             body: {
                 name, 
@@ -43,6 +39,10 @@ adminTeacherRouter.post("/", async (req, res) => {
             .returning();
 
         if(!teacherResult){
+            await auth.api.removeUser({
+                body: {userId: newUser.user.id}, 
+                headers: req.headers,
+            })
             return res.status(400).json({error: "Failure to create new teacher."});
         }
 
@@ -50,38 +50,6 @@ adminTeacherRouter.post("/", async (req, res) => {
             user: newUser.user, 
             teacherProfile: teacherResult
         }});
-
-        // const [userResult] = await db
-        //     .select({id: user.id})
-        //     .from(user)
-        //     .where(and(eq(user.id, userId), eq(user.profileRole, "teacher")))
-        //     .limit(1);
-
-        // if(!userResult){
-        //     return res.status(400).json({error: "User not found or is not a teacher"});
-        // }
-
-        // const [existing] = await db
-        //     .select({id: teacherProfiles.userId})
-        //     .from(teacherProfiles)
-        //     .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId)))
-        //     .limit(1);
-
-        // if(existing){
-        //     return res.status(409).json({error: "Teacher profile already exists"});
-        // }
-
-        // const newTeacher: NewTeacherProfile = {
-        //     userId, 
-        //     schoolId, 
-        // }
-
-        // const [teacherResult] = await db
-        //     .insert(teacherProfiles)
-        //     .values(newTeacher)
-        //     .returning();
-
-        // return res.status(201).json({data: teacherResult})
     } catch (error) {
         console.error("POST /admin/teacher error: ", error);
         return res.status(500).json({error: "There was an error creating the teacher"});
@@ -199,6 +167,16 @@ adminTeacherRouter.delete("/:userId", async (req, res) => {
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const {userId} = req.params;
+
+        const [existing] = await db
+            .select({userId: teacherProfiles.userId})
+            .from(teacherProfiles)
+            .where(and(eq(teacherProfiles.userId, userId), eq(teacherProfiles.schoolId, schoolId)))
+            .limit(1);
+
+        if(!existing){
+            return res.status(400).json({error: "No teacher profile"});
+        }
 
         const result = await auth.api.removeUser({
             body:{

@@ -27,6 +27,7 @@ termsRouter.get("/", async (req, res) => {
         const offset = (currentPage - 1) * limitPerPage;
 
         const filterConditions = [];
+        filterConditions.push(eq(terms.schoolId, schoolId));
 
         if(search){
             filterConditions.push(

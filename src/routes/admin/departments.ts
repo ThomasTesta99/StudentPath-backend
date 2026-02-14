@@ -103,15 +103,15 @@ departmentsRouter.get("/", async (req,res)=> {
 departmentsRouter.patch("/:id", async (req, res) => {
     try {
         const {id} = req.params;
-        const {departmentName} = req.body;
+        const {name} = req.body;
 
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const updates: Partial<NewDepartment> = {};
 
-        if(typeof departmentName === "string"){
-            const trimmed = departmentName.trim();
+        if(typeof name === "string"){
+            const trimmed = name.trim();
             if(trimmed.length === 0){
                 return res.status(400).json({error: "Must enter department name"});
             }

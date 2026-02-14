@@ -57,7 +57,7 @@ coursesRouter.post("/", async (req, res) => {
         const [teacher] = await db
             .select({userId: teacherProfiles.userId})
             .from(teacherProfiles)
-            .where(and(eq(user.id, newCourse.teacherId), eq(teacherProfiles.schoolId, schoolId)))
+            .where(and(eq(teacherProfiles.userId, newCourse.teacherId), eq(teacherProfiles.schoolId, schoolId)))
             .limit(1);
         if(!teacher) return res.status(400).json({error: "Invalid teacherId/ does not belong to school"});
         
