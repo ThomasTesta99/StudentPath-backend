@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { adminProfiles, courses, departments, NewAdminProfile, NewCourse, NewDepartment, session, user } from "../db/schema";
+import { adminProfiles, courses, departments, NewAdminProfile, NewCourse, NewDepartment, NewUser, session, user } from "../db/schema";
 import { auth } from "../lib/auth";
 import { randomUUID } from "crypto";
 
@@ -10,47 +10,45 @@ const seededUsers: Array<{
     email: string, 
     name: string, 
     password: string,
-    role: Role
+    role: "user" | "admin", 
+    profileRole: Role,
 }> = [ 
-    { email: "admin@test.com", name: "Admin", password : "12345678", role: "admin"},
-  { email: "teacher@test.com", name: "Teacher", password : "12345678", role: "teacher"},
-  { email: "student@test.com", name: "Student" , password : "12345678", role: "student"},
-  { email: "parent@test.com", name: "Parent" , password : "12345678", role: "parent"},
+  { email: "teacher@test.com", name: "Teacher", password : "12345678", role: "user", profileRole: "teacher"},
+  { email: "student@test.com", name: "Student" , password : "12345678", role: "user", profileRole: "student"},
+  { email: "parent@test.com", name: "Parent" , password : "12345678", role: "user", profileRole: "parent"},
 ]
 
-// ===== Departments =====
 export const seededDepartments: Array<NewDepartment> = [
   {
     id: randomUUID(),
     name: "Computer Science",
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
   },
   {
     id: randomUUID(),
     name: "Mathematics",
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
   },
   {
     id: randomUUID(),
     name: "English",
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
   },
   {
     id: randomUUID(),
     name: "Science",
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
   },
 ] as const;
 
 
-// ===== Courses =====
 export const seededCourses: Array<NewCourse> = [
   {
     id: randomUUID(),
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
-    termId: "058bf082-f4bb-4b41-affc-a566c5eaec7e",
-    teacherId: "KC2ssDoXyRF81TfixMgqbnaL4jPGjfaq",
-    departmentId: "a15ea3df-59d5-48a6-a134-78df7feca6f2",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
+    termId: "87d8b5b4-4ff7-4e51-9569-829ede6810a2",
+    teacherId: "zZypoW9lJ5JplqzMwSsdfHlHB6tYirvq",
+    departmentId: "faac7acd-e6d7-4f27-9b52-0cbc346fb4b6",
     name: "Data Structures",
     gradeLevel: "11",
     code: "CSC 326",
@@ -58,10 +56,10 @@ export const seededCourses: Array<NewCourse> = [
   },
   {
     id: randomUUID(),
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
-    termId: "058bf082-f4bb-4b41-affc-a566c5eaec7e",
-    teacherId: "KC2ssDoXyRF81TfixMgqbnaL4jPGjfaq",
-    departmentId: "a15ea3df-59d5-48a6-a134-78df7feca6f2",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
+    termId: "87d8b5b4-4ff7-4e51-9569-829ede6810a2",
+    teacherId: "zZypoW9lJ5JplqzMwSsdfHlHB6tYirvq",
+    departmentId: "faac7acd-e6d7-4f27-9b52-0cbc346fb4b6",
     name: "Intro to Programming",
     gradeLevel: "10",
     code: "CSC 210",
@@ -69,10 +67,10 @@ export const seededCourses: Array<NewCourse> = [
   },
   {
     id: randomUUID(),
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
-    termId: "058bf082-f4bb-4b41-affc-a566c5eaec7e",
-    teacherId: "KC2ssDoXyRF81TfixMgqbnaL4jPGjfaq",
-    departmentId: "31822d3d-7560-46e5-95c5-1293a66e709b",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
+    termId: "87d8b5b4-4ff7-4e51-9569-829ede6810a2",
+    teacherId: "zZypoW9lJ5JplqzMwSsdfHlHB6tYirvq",
+    departmentId: "3880aa7e-892b-48a9-b713-39e1f7662116",
     name: "Algebra II",
     gradeLevel: "10",
     code: "MTH 221",
@@ -80,10 +78,10 @@ export const seededCourses: Array<NewCourse> = [
   },
   {
     id: randomUUID(),
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
-    termId: "058bf082-f4bb-4b41-affc-a566c5eaec7e",
-    teacherId: "KC2ssDoXyRF81TfixMgqbnaL4jPGjfaq",
-    departmentId: "31822d3d-7560-46e5-95c5-1293a66e709b",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
+    termId: "87d8b5b4-4ff7-4e51-9569-829ede6810a2",
+    teacherId: "zZypoW9lJ5JplqzMwSsdfHlHB6tYirvq",
+    departmentId: "3880aa7e-892b-48a9-b713-39e1f7662116",
     name: "Precalculus",
     gradeLevel: "11",
     code: "MTH 310",
@@ -91,10 +89,10 @@ export const seededCourses: Array<NewCourse> = [
   },
   {
     id: randomUUID(),
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
-    termId: "058bf082-f4bb-4b41-affc-a566c5eaec7e",
-    teacherId: "KC2ssDoXyRF81TfixMgqbnaL4jPGjfaq",
-    departmentId: "4c773759-20e1-4e3b-9981-4979a24ab409",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
+    termId: "87d8b5b4-4ff7-4e51-9569-829ede6810a2",
+    teacherId: "zZypoW9lJ5JplqzMwSsdfHlHB6tYirvq",
+    departmentId: "e96ec020-71f7-4bc4-ab76-521a6f031c95",
     name: "English Composition",
     gradeLevel: "9",
     code: "ENG 105",
@@ -102,10 +100,10 @@ export const seededCourses: Array<NewCourse> = [
   },
   {
     id: randomUUID(),
-    schoolId: "336a77ae-8764-45f4-a79d-d12533307c32",
-    termId: "058bf082-f4bb-4b41-affc-a566c5eaec7e",
-    teacherId: "KC2ssDoXyRF81TfixMgqbnaL4jPGjfaq",
-    departmentId: "eaccefb5-f067-4d08-8854-fd980c256975",
+    schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
+    termId: "87d8b5b4-4ff7-4e51-9569-829ede6810a2",
+    teacherId: "zZypoW9lJ5JplqzMwSsdfHlHB6tYirvq",
+    departmentId: "b47d1666-a053-491d-8bea-94b4ed860a86",
     name: "Biology",
     gradeLevel: "9",
     code: "SCI 140",
@@ -115,35 +113,24 @@ export const seededCourses: Array<NewCourse> = [
 
 
 
-async function createUser(email : string, name: string, password: string, role: Role){
-    try {
-        const result = await auth.api.signUpEmail({
-            body: {
-                name, 
-                email, 
-                password
-            }
-        })
+// async function createUser(email : string, name: string, password: string, role: Role){
+//     try {
+//         const result = await fetch("http://localhost:8000/api/admin/schools", {
+//             method: "POST", 
+//             headers: {"Content-Type": "application/json"}, 
+//             credentials: "include",
+//             body: JSON.stringify({
+//             schoolName: "Tottenville High School", 
+//             })
+//         });
 
-        if(!result.user){
-            throw new Error("There was an error thrown creating a new user.");
-        }
-
-        const userId = result.user.id;
-
-        // update user role
-
-        await db
-            .update(user)
-            .set({role: role})
-            .where(eq(user.id, userId));
-
-        console.log('User:', result.user);
-        await db.delete(session).where(eq(session.userId, userId));
-    } catch (error) {
-        console.error("There was an error creating the user: ",error);
-    }
-}
+//       console.log(result.ok);
+//       const text = await result.json();
+//       console.log(text);
+//     } catch (error) {
+//         console.error("There was an error creating the user: ",error);
+//     }
+// }
 
 async function createDepartment({newDepartment} : {newDepartment: NewDepartment}){
     try {
@@ -171,44 +158,79 @@ async function createCourse({newCourse}: {newCourse: NewCourse}){
     }
 }
 
-async function createAdmin({userId, schoolId}: NewAdminProfile){
+// async function createAdmin({userId, schoolId}: NewAdminProfile){
+//     try {
+//         const userRole = await db
+//             .select({role: user.role})
+//             .from(user)
+//             .where(eq(user.id, userId))
+//             .limit(1);
+
+//         if(userRole[0]?.role !== "admin"){
+//             console.error("Must be admin");
+//             return;
+//         }
+//         const [admin] = await db
+//             .insert(adminProfiles)
+//             .values({userId,schoolId})
+//             .returning();
+
+//         console.log("Admin created: ", admin);
+//     } catch (error) {
+//        console.error("Error creating admin: ", error); 
+//     }
+// }
+
+// async function createAdmin(){
+//     try {
+//         const result = await auth.api.createUser({
+//             body: {
+//                 email: "ttesta99@yahoo.com", 
+//                 password: "12345678", 
+//                 name: "Thomas Testa",
+//                 role: "admin", 
+//                 data: {profileRole: "admin"},
+//             }
+//         })
+//         console.log(result.user);
+//     } catch (error) {
+//         console.log(error);
+//     }
+// }
+
+async function createAdminProfile() {
     try {
-        const userRole = await db
-            .select({role: user.role})
-            .from(user)
-            .where(eq(user.id, userId))
-            .limit(1);
-
-        if(userRole[0]?.role !== "admin"){
-            console.error("Must be admin");
-            return;
-        }
-        const [admin] = await db
+        const result = await db
             .insert(adminProfiles)
-            .values({userId,schoolId})
-            .returning();
+            .values({
+                userId: "koipsHycBm3KN14GDvROHOihtUhY8hMW",
+                schoolId: "bc3e9174-b0fa-4aed-b096-143c4f557d27",
+            })
 
-        console.log("Admin created: ", admin);
+        console.log(result);
     } catch (error) {
-       console.error("Error creating admin: ", error); 
+        console.error(error);
     }
 }
 
 async function main() {
     // for(const user of seededUsers){
-    //     await createUser(user.email, user.name, user.password, user.role);
+    //     await createUser(user.email, user.name, user.password, user.profileRole);
     // }
 
     // for(const department of seededDepartments){
     //     await createDepartment({newDepartment: department});
     // }
 
-    // for(const course of seededCourses){
-    //     await createCourse({newCourse: course});
-    // }
+    for(const course of seededCourses){
+        await createCourse({newCourse: course});
+    }
 
-    await createAdmin({userId: "d0XeiKlTzRDluGhfjJZANEok6qAwgwQr", schoolId: "336a77ae-8764-45f4-a79d-d12533307c32"});
-    await createAdmin({userId: "EioVtcEfdtmd6X8bWMhMxzemIEDSjYKK", schoolId: "eb77bf11-0ea7-41fe-a328-67ca9bed3af4"});
+    // await createAdmin({userId: "d0XeiKlTzRDluGhfjJZANEok6qAwgwQr", schoolId: "336a77ae-8764-45f4-a79d-d12533307c32"});
+    // await createAdmin({userId: "EioVtcEfdtmd6X8bWMhMxzemIEDSjYKK", schoolId: "eb77bf11-0ea7-41fe-a328-67ca9bed3af4"});
+
+    //await createAdmin();
+    // await createAdminProfile();
 }
 
 main()

@@ -27,6 +27,7 @@ termsRouter.get("/", async (req, res) => {
         const offset = (currentPage - 1) * limitPerPage;
 
         const filterConditions = [];
+        filterConditions.push(eq(terms.schoolId, schoolId));
 
         if(search){
             filterConditions.push(
@@ -36,10 +37,10 @@ termsRouter.get("/", async (req, res) => {
 
         const activeBool = parseBooleanQuery(active);
         if (activeBool !== undefined) {
-        filterConditions.push(eq(terms.isActive, activeBool));
+            filterConditions.push(eq(terms.isActive, activeBool));
         }
 
-        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+        const whereClause = and(...filterConditions);
 
         const countResult = await db
             .select({count: sql<number>`count(*)`})

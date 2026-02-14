@@ -57,7 +57,7 @@ coursesRouter.post("/", async (req, res) => {
         const [teacher] = await db
             .select({userId: teacherProfiles.userId})
             .from(teacherProfiles)
-            .where(and(eq(user.id, newCourse.teacherId), eq(teacherProfiles.schoolId, schoolId)))
+            .where(and(eq(teacherProfiles.userId, newCourse.teacherId), eq(teacherProfiles.schoolId, schoolId)))
             .limit(1);
         if(!teacher) return res.status(400).json({error: "Invalid teacherId/ does not belong to school"});
         
@@ -92,9 +92,6 @@ coursesRouter.get("/", async (req ,res) => {
         const offset = (currentPage - 1) * limitPerPage;
 
         const filterConditions = [];
-        if (!schoolId || String(schoolId).trim().length === 0) {
-            return res.status(400).json({ error: "schoolId is required" });
-        }
         filterConditions.push(eq(courses.schoolId, String(schoolId)));
 
         if(search){
@@ -109,7 +106,7 @@ coursesRouter.get("/", async (req ,res) => {
             }
         }
 
-        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+        const whereClause = and(...filterConditions);
 
         const countResult = await db
             .select({count: sql<number>`count(*)`})
@@ -193,7 +190,7 @@ coursesRouter.get("/:id", async (req, res) => {
             return res.status(404).json({error: "There was an error getting the course"})
         }
 
-        return res.status(200).json({course: course});
+        return res.status(200).json({data: course});
     } catch (error) {
         console.error("GET /courses/id error: ", error);
         return res.status(500).json({error: "There was an error getting the course"});
@@ -253,7 +250,7 @@ coursesRouter.patch("/:id", async (req, res) => {
 
         if(!updated) return res.status(400).json({error: "There was an error updating the course"});
 
-        return res.status(200).json({course: updated});
+        return res.status(200).json({data: updated});
     } catch (error) {
         console.error("PATCH /courses error: ", error);
         return res.status(500).json({error: "There was an error updating the course"});
@@ -274,7 +271,7 @@ coursesRouter.delete("/:id", async (req, res) => {
 
         if(!deleted) return res.status(404).json({error: "Course not found"});
 
-        return res.status(200).json({deletedCourse: deleted});
+        return res.status(200).json({data: deleted});
     } catch (error) {
         console.error("DELETE /courses error: ", error);
         return res.status(500).json({error: "There was an error deleting the course"});
