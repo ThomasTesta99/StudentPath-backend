@@ -35,8 +35,8 @@ departmentsRouter.post("/", async (req, res) => {
         return res.status(201).json({data: result});
     } catch (error) {
         console.error("POST departments error: ", error);
+        return res.status(500).json({error: "There was an error creating the department"});
     }
-    return res.status(500).json({error: "There was an error creating the department"});
 })
 
 departmentsRouter.get("/", async (req,res)=> {

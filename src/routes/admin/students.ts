@@ -45,10 +45,10 @@ adminStudentsRouter.post("/", async (req, res) => {
             return res.status(400).json({error: "There was an error signing up the user."})
         }
 
-        const user = result.user;
+        const createdUser = result.user;
         
         const newStudent: NewStudentProfile = {
-            userId: user.id, 
+            userId: createdUser.id, 
             schoolId, 
             osis: osisString,
             dob: dobString, 
@@ -62,13 +62,13 @@ adminStudentsRouter.post("/", async (req, res) => {
 
         if(!createdProfile){
             await auth.api.removeUser({
-                body: {userId: user.id}, 
+                body: {userId: createdUser.id}, 
                 headers: req.rawHeaders,
             })
             return res.status(400).json({error: "There was an error creating a student profile"});
         }
 
-        return res.status(201).json({user: user, profile: createdProfile});
+        return res.status(201).json({user: createdUser, profile: createdProfile});
     } catch (error) {
         console.error("POST /admin students error: ", error);
         return res.status(500).json({error: "There was an error creating the student"});
