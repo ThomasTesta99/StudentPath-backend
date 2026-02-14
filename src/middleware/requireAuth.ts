@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { auth } from "../lib/auth";
 import { db } from "../db";
-import {  user } from "../db/schema";
+import { user } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { AppRole } from "../types/express";
 import { fromNodeHeaders } from "better-auth/node";
@@ -23,7 +23,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
         const email = session.user.email ?? null;
 
         const rows = await db
-            .select({ role: user.role, email: user.email })
+            .select({ role: user.profileRole, email: user.email })
             .from(user)
             .where(eq(user.id, userId))
             .limit(1);

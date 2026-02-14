@@ -31,12 +31,13 @@ adminStudentsRouter.post("/", async (req, res) => {
             return res.status(409).json({error: "A student with this OSIS already exists in this school"})
         }
 
-        const result = await auth.api.signUpEmail({
+        const result = await auth.api.createUser({
             body: {
                 name, 
                 email, 
                 password,
-                role: "student"
+                role: "user",
+                data: {profileRole: "student"}
             }
         })
 
@@ -220,5 +221,32 @@ adminStudentsRouter.patch("/:userId", async (req, res) => {
     } catch (error) {
         console.error("PATCH /students error: ", error);
         return res.status(500).json({error: "Failure to update student profile"});
+    }
+})
+
+adminStudentsRouter.delete("/:userId", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {userId} = req.params;
+
+        const [deletedProfile] = await db
+            .delete(studentProfiles)
+            .where(and(eq(studentProfiles.userId, userId), eq(studentProfiles.schoolId, schoolId)))
+            .returning();
+
+        if(!deletedProfile){
+            return res.status(400).json({error: "No student profile found"});
+        }
+
+        const deleteUser = await auth.api.removeUser({
+            body: {
+                userId
+            }
+        })
+    } catch (error) {
+        console.error("DELETE /students error: ", error);
+        return res.status(500).json({error: "There was an error deleting the student"});
     }
 })

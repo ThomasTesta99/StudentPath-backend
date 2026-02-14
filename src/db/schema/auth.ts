@@ -1,7 +1,8 @@
 import { boolean, index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { timestamps } from "./timestamps";
 
-export const roleEnum = pgEnum("role", ["student", "teacher", "admin", "parent"]);
+export const roleEnum = pgEnum("profile_role", ["student", "teacher", "admin", "parent"]);
+export const betterAuthRoleEnum = pgEnum("auth_role", ["user", "admin"]);
 
 export const user = pgTable("user", {
     id: text("id").primaryKey(),
@@ -9,7 +10,13 @@ export const user = pgTable("user", {
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").notNull().default(false),
     image: text("image"),
-    role: roleEnum("role").default("student").notNull(),
+    role: betterAuthRoleEnum("role").notNull().default("user"),
+    profileRole: roleEnum("profile_role").default("student").notNull(),
+
+    //Needed admin fields
+    banned: boolean("banned").notNull().default(false),
+    banReason: text("ban_reason"),
+    banExpires: timestamp("ban_expires", { withTimezone: true }),
     ...timestamps
 });
 

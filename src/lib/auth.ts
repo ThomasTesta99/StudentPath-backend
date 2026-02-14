@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";// your drizzle instance
 import { db } from "../db";
 import * as schema from '../db/schema/auth'
+import { admin } from "better-auth/plugins"
 
 
 const betterAuthSecret = process.env.BETTER_AUTH_SECRET;
@@ -26,12 +27,15 @@ export const auth = betterAuth({
     },
     user: {
         additionalFields: {
-            role: {
+            profileRole: {
                 type: "string", 
                 required: true, 
                 defaultValue: "student", 
                 input: true,
             }
         }
-    }
+    },
+    plugins: [
+        admin()
+    ]
 })
