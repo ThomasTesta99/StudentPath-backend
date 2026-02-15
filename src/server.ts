@@ -10,6 +10,7 @@ import { adminTeacherRouter} from './routes/admin/teachers';
 import { coursesRouter } from './routes/admin/courses';
 import { departmentsRouter } from './routes/admin/departments';
 import { adminStudentsRouter } from './routes/admin/students';
+import { enrollmentsRouter } from './routes/admin/enrollments';
 
 const app = express();
 const PORT = 8000;
@@ -36,9 +37,7 @@ app.use("/api/admin/teachers", requireAuth, requireRole(["admin"]), adminTeacher
 app.use("/api/admin/departments", requireAuth, requireRole(["admin"]), departmentsRouter);
 app.use("/api/admin/courses", requireAuth, requireRole(["admin"]), coursesRouter);
 app.use("/api/admin/students", requireAuth, requireRole(["admin"]), adminStudentsRouter);
-
-
-
+app.use("/api/admin/enrollments", requireAuth, requireRole(["admin"]), enrollmentsRouter);
 
 app.get('/', async (req, res) => {
     res.send('Hello, welcome to the Classroom API');
