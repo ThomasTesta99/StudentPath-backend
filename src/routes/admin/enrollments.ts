@@ -1,8 +1,8 @@
 import express from "express"
 import { getSchoolIdForAdmin } from "../../lib/utils";
 import { db } from "../../db";
-import { and, desc, eq, getTableColumns, sql } from "drizzle-orm";
-import { courses, enrollments, studentProfiles, user } from "../../db/schema";
+import { and, desc, eq, getTableColumns, ilike, sql } from "drizzle-orm";
+import { courses, enrollments, NewEnrollment, studentProfiles, user } from "../../db/schema";
 
 export const enrollmentsRouter = express.Router();
 
@@ -21,7 +21,8 @@ enrollmentsRouter.get("/:courseId/roster", async (req, res) => {
         const [verifyCourse] = await db
             .select({id: courses.id})
             .from(courses)
-            .where(and(eq(courses.id, courseId), eq(courses.schoolId, schoolId)));
+            .where(and(eq(courses.id, courseId), eq(courses.schoolId, schoolId)))
+            .limit(1);
         
         if(!verifyCourse){
             return res.status(404).json({error: "No course found"})
@@ -65,5 +66,54 @@ enrollmentsRouter.get("/:courseId/roster", async (req, res) => {
     } catch (error) {
         console.error("GET /enrollments error: ", error);
         return res.status(500).json({error: "There was an error getting the enrollments"});
+    }
+})
+
+enrollmentsRouter.post("/:courseId", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {courseId} = req.params;
+        const {studentId} = req.body;
+
+        if (typeof studentId !== "string" || studentId.trim().length === 0) {
+            return res.status(400).json({ error: "studentId is required" });
+        }
+
+        const [course] = await db
+            .select({id: courses.id})
+            .from(courses)
+            .where(and(eq(courses.schoolId, schoolId), eq(courses.id, courseId)))
+            .limit(1);
+        
+        if(!course){
+            return res.status(404).json({error: "No course found"});
+        }
+
+        const [student] = await db
+            .select({id: studentProfiles.userId})
+            .from(studentProfiles)
+            .where(and(eq(studentProfiles.schoolId, schoolId), eq(studentProfiles.userId, studentId)))
+            .limit(1);
+
+        if(!student){
+            return res.status(404).json({error: "No student found"});
+        }
+
+        const newEnrollment: NewEnrollment = {
+            courseId: courseId, 
+            studentId: studentId, 
+        }
+
+        const [enrollmentResult] = await db
+            .insert(enrollments)
+            .values(newEnrollment)
+            .returning();
+
+        return res.status(201).json({data: enrollmentResult })
+    } catch (error) {
+        console.error("POST /enrollments error: ", error);
+        return res.status(500).json({error: "There was an error creating the enrollment"});
     }
 })
