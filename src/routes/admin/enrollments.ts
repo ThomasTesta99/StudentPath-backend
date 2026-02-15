@@ -31,7 +31,7 @@ enrollmentsRouter.get("/:courseId/roster", async (req, res) => {
         const countResult = await db
             .select({count: sql<number>`count(*)`})
             .from(enrollments)
-            .where(eq(enrollments.courseId, courseId))
+            .where(eq(enrollments.courseId, courseId));
 
         const totalCount = countResult[0]?.count ?? 0;
 
@@ -109,7 +109,12 @@ enrollmentsRouter.post("/:courseId", async (req, res) => {
         const [enrollmentResult] = await db
             .insert(enrollments)
             .values(newEnrollment)
+            .onConflictDoNothing()
             .returning();
+
+        if (!enrollmentResult) {
+            return res.status(409).json({ error: "Student is already enrolled in this course" });
+        }
 
         return res.status(201).json({data: enrollmentResult })
     } catch (error) {
@@ -124,10 +129,6 @@ enrollmentsRouter.delete("/:courseId/:studentId", async (req, res) => {
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const {courseId, studentId} = req.params;
-
-        if (typeof studentId !== "string" || studentId.trim().length === 0) {
-            return res.status(400).json({ error: "studentId is required" });
-        }
 
         const [course] = await db
             .select({id: courses.id})
