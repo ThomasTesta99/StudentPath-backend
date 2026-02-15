@@ -117,3 +117,40 @@ enrollmentsRouter.post("/:courseId", async (req, res) => {
         return res.status(500).json({error: "There was an error creating the enrollment"});
     }
 })
+
+enrollmentsRouter.delete("/:courseId/:studentId", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {courseId, studentId} = req.params;
+
+        if (typeof studentId !== "string" || studentId.trim().length === 0) {
+            return res.status(400).json({ error: "studentId is required" });
+        }
+
+        const [course] = await db
+            .select({id: courses.id})
+            .from(courses)
+            .where(and(eq(courses.schoolId, schoolId), eq(courses.id, courseId)))
+            .limit(1);
+        
+        if(!course){
+            return res.status(404).json({error: "No course found"});
+        }
+
+        const [deleted] = await db
+            .delete(enrollments)
+            .where(and(eq(enrollments.studentId, studentId), eq(enrollments.courseId, courseId)))
+            .returning();
+
+        if(!deleted){
+            return res.status(404).json({error: "Enrollment not found"});
+        }
+
+        return res.status(200).json({data: deleted});
+    } catch (error) {
+        console.error("DELETE /enrollments error: ", error);
+        return res.status(500).json({error: "There was an error deleting the enrollment"});
+    }
+})
