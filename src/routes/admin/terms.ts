@@ -72,6 +72,28 @@ termsRouter.get("/", async (req, res) => {
     }
 })
 
+termsRouter.get("/:id", async (req, res) => {
+  try {
+    const schoolId = await getSchoolIdForAdmin(req);
+    if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+    const { id } = req.params;
+
+    const [term] = await db
+      .select()
+      .from(terms)
+      .where(and(eq(terms.id, id), eq(terms.schoolId, schoolId)))
+      .limit(1);
+
+    if (!term) return res.status(404).json({ error: "Term not found" });
+
+    return res.status(200).json({ data: term });
+  } catch (error) {
+    console.error("GET /terms/:id error:", error);
+    return res.status(500).json({ error: "There was an error getting the term" });
+  }
+});
+
 termsRouter.post("/", async (req,res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
