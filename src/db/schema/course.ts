@@ -9,11 +9,11 @@ export const departments = pgTable("departments", {
     schoolId: text("school_id").notNull().references(() => schools.id, { onDelete: "cascade" }),
     ...timestamps
 },
-  (table) => ({
-    schoolNameUnique: uniqueIndex("departments_school_name_unique").on(table.schoolId, table.name),
-    schoolIdx: index("departments_school_id_idx").on(table.schoolId),
-    nameIdx: index("departments_name_idx").on(table.name),
-  })
+  (table) => ([
+    uniqueIndex("departments_school_name_unique").on(table.schoolId, table.name),
+    index("departments_school_id_idx").on(table.schoolId),
+    index("departments_name_idx").on(table.name),
+  ])
 )
 
 export const courses = pgTable("courses", {
@@ -28,15 +28,15 @@ export const courses = pgTable("courses", {
     description: text("description").notNull(), 
     ...timestamps
 },
-  (table) => ({
-    schoolIdIdx: index("courses_school_id_idx").on(table.schoolId),
-    termIdIdx: index("courses_term_id_idx").on(table.termId),
-    teacherIdIdx: index("courses_teacher_id_idx").on(table.teacherId),
-    departmentIdIdx: index("courses_department_id_idx").on(table.departmentId),
-    teacherTermIdx: index("courses_teacher_term_idx").on(table.teacherId, table.termId),
-    schoolTermIdx: index("courses_school_term_idx").on(table.schoolId, table.termId),
-    schoolGradeIdx: index("courses_school_grade_idx").on(table.schoolId, table.gradeLevel),
-  })
+  (table) => ([
+    index("courses_school_id_idx").on(table.schoolId),
+    index("courses_term_id_idx").on(table.termId),
+    index("courses_teacher_id_idx").on(table.teacherId),
+    index("courses_department_id_idx").on(table.departmentId),
+    index("courses_teacher_term_idx").on(table.teacherId, table.termId),
+    index("courses_school_term_idx").on(table.schoolId, table.termId),
+    index("courses_school_grade_idx").on(table.schoolId, table.gradeLevel),
+  ])
 );
 
 export const enrollments = pgTable("enrollments", {
@@ -44,11 +44,11 @@ export const enrollments = pgTable("enrollments", {
     studentId: text("student_id").notNull().references(() => user.id, {onDelete: "cascade"}),
     ...timestamps
 },
-  (table) => ({
-    pk: primaryKey({ columns: [table.courseId, table.studentId] }),
-    courseIdIdx: index("enrollments_course_id_idx").on(table.courseId),
-    studentIdIdx: index("enrollments_student_id_idx").on(table.studentId),
-  })
+  (table) => ([
+    primaryKey({ columns: [table.courseId, table.studentId] }),
+    index("enrollments_course_id_idx").on(table.courseId),
+    index("enrollments_student_id_idx").on(table.studentId),
+  ])
 );
 
 export type Department = typeof departments.$inferSelect;

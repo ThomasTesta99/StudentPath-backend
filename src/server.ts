@@ -11,6 +11,8 @@ import { coursesRouter } from './routes/admin/courses';
 import { departmentsRouter } from './routes/admin/departments';
 import { adminStudentsRouter } from './routes/admin/students';
 import { enrollmentsRouter } from './routes/admin/enrollments';
+import { parentInvitesRouter } from './routes/parents/redeemInvite';
+import { adminParentsRouter } from './routes/admin/parents';
 
 const app = express();
 const PORT = 8000;
@@ -38,6 +40,10 @@ app.use("/api/admin/departments", requireAuth, requireRole(["admin"]), departmen
 app.use("/api/admin/courses", requireAuth, requireRole(["admin"]), coursesRouter);
 app.use("/api/admin/students", requireAuth, requireRole(["admin"]), adminStudentsRouter);
 app.use("/api/admin/enrollments", requireAuth, requireRole(["admin"]), enrollmentsRouter);
+app.use("/api/admin/parents", requireAuth, requireRole(["admin"]), adminParentsRouter);
+
+// PARENT ROUTES
+app.use("/api/parents", requireAuth, requireRole(["parent"]), parentInvitesRouter);
 
 app.get('/', async (req, res) => {
     res.send('Hello, welcome to the Classroom API');

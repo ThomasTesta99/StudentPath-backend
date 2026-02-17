@@ -16,13 +16,10 @@ export const terms = pgTable("terms", {
     isActive: boolean("is_active").notNull().default(false),
     ...timestamps,
 },
-    (table) => ({
-        schoolIdIdx: index("terms_school_id_idx").on(table.schoolId),
-        schoolActiveIdx: index("terms_school_id_is_active_idx").on(
-            table.schoolId, table.isActive
-        )
-    })
-
+    (table) => ([
+        index("terms_school_id_idx").on(table.schoolId),
+        index("terms_school_id_is_active_idx").on(table.schoolId, table.isActive),
+    ])
 );
 
 export type School = typeof schools.$inferSelect;
