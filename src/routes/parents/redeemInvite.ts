@@ -11,7 +11,6 @@ parentInvitesRouter.post("/redeem-invite", async (req, res) => {
     try {
         const session = await auth.api.getSession({headers: req.headers});
         const user = session?.user
-        console.log("BODY: ", req.body)
         if(!user) return res.status(401).json({error: "Not authenticated"});
         if(user.profileRole !== "parent"){
             return res.status(403).json({error: "Must be a parent"});
