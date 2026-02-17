@@ -3,20 +3,13 @@ import { user } from "./auth";
 import { schools } from "./school";
 import { timestamps } from "./timestamps";
 
-export const adminProfiles = pgTable(
-  "admin_profiles",
-  {
-    userId: text("user_id")
-      .primaryKey()
-      .references(() => user.id, { onDelete: "cascade" }),
-    schoolId: text("school_id")
-      .notNull()
-      .references(() => schools.id, { onDelete: "cascade" }),
+export const adminProfiles = pgTable("admin_profiles",{
+    userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+    schoolId: text("school_id").notNull().references(() => schools.id, { onDelete: "cascade" }),
     ...timestamps,
   },
   (table) => ([
       index("admin_profiles_school_id_idx").on(table.schoolId),
-
   ])
 );
 
@@ -83,7 +76,8 @@ export const parentInvites = pgTable("parent_invites", {
 },
     (table) => ([
         index("parent_invites_school_id_idx").on(table.schoolId),
-        index("parent_invites_student_id_idx").on(table.studentId)
+        index("parent_invites_student_id_idx").on(table.studentId),
+        uniqueIndex("parent_invites_token_hash_unique").on(table.tokenHash)
     ])
 
 )

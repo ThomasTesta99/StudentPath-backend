@@ -16,6 +16,16 @@ adminParentsRouter.post("/", async (req, res) => {
 
         const {name, email, password} = req.body;
 
+        if (!name || typeof name !== "string") {
+            return res.status(400).json({ error: "name is required" });
+        }
+        if (!email || typeof email !== "string") {
+            return res.status(400).json({ error: "email is required" });
+        }
+        if (!password || typeof password !== "string") {
+            return res.status(400).json({ error: "password is required" });
+        }
+
         const result = await auth.api.createUser({
             body: {
                 name, 
@@ -142,7 +152,7 @@ adminParentsRouter.get("/:userId", async (req, res) => {
             .limit(1);
 
         if(!parent){
-            return res.status(400).json("There was an error getting the parent");
+            return res.status(400).json({error: "There was an error getting the parent"});
         }
 
         return res.status(200).json({data: parent});

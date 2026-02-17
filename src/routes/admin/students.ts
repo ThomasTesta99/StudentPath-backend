@@ -14,6 +14,16 @@ adminStudentsRouter.post("/", async (req, res) => {
 
         const {name, email, password, dob, gradeLevel, osis} = req.body;
 
+        if (!name || typeof name !== "string") {
+            return res.status(400).json({ error: "name is required" });
+        }
+        if (!email || typeof email !== "string") {
+            return res.status(400).json({ error: "email is required" });
+        }
+        if (!password || typeof password !== "string") {
+            return res.status(400).json({ error: "password is required" });
+        }
+
         const osisString = String(osis ?? "").trim();
         if (!/^\d{9}$/.test(osisString)) {
             return res.status(400).json({ error: "osis must be exactly 9 digits (as a string)" });
