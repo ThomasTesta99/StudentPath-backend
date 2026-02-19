@@ -53,7 +53,7 @@ termsRouter.get("/", async (req, res) => {
             .select()
             .from(terms)
             .where(whereClause)
-            .orderBy(desc(terms.createdAt))
+            .orderBy(desc(terms.isActive), desc(terms.createdAt))
             .limit(limitPerPage)
             .offset(offset);
 
@@ -232,6 +232,11 @@ termsRouter.patch("/:id/activate", async (req, res) => {
         
         const {id} = req.params;
 
+        const deactivate = await db
+            .update(terms)
+            .set({isActive: false})
+            and(eq(terms.schoolId, schoolId), eq(terms.isActive, true));
+
         const [activated] = await db
             .update(terms)
             .set({isActive: true})
@@ -242,9 +247,33 @@ termsRouter.patch("/:id/activate", async (req, res) => {
             return res.status(400).json({error : "There was an error activating the term"});
         }
 
-        return res.status(200).json({data: activated, message: `Term: ${activated.termName} has been activated: ${activated.isActive}`});
+        return res.status(200).json({data: activated});
     } catch (error) {
         console.error("PATCH /activate error: ", error);
         return res.status(500).json({error: "There was an error activating the term"});
+    }
+});
+
+termsRouter.patch("/:id/deactivate", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {id} = req.params;
+
+        const [deactivated] = await db
+            .update(terms)
+            .set({isActive: false})
+            .where(and(eq(terms.id, id), eq(terms.schoolId, schoolId)))
+            .returning();
+
+        if(!deactivated){
+            return res.status(404).json({error: "Term not found"});
+        }
+        
+        return res.status(200).json({data: deactivated})
+    } catch (error) {
+        console.error("PATCH /deactivate error: ", error);
+        return res.status(500).json({error: "There was an error deactivating the term"});
     }
 })
