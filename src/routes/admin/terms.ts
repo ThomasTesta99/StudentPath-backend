@@ -1,6 +1,6 @@
-import { and, desc, eq, ilike, sql } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, ilike, sql } from 'drizzle-orm';
 import express from 'express'
-import { NewTerm, terms } from '../../db/schema';
+import { NewTerm, schools, terms } from '../../db/schema';
 import { db } from '../../db';
 import { randomUUID } from 'crypto';
 import { getSchoolIdForAdmin } from '../../lib/utils';
@@ -80,8 +80,14 @@ termsRouter.get("/:id", async (req, res) => {
     const { id } = req.params;
 
     const [term] = await db
-      .select()
+      .select({
+        ...getTableColumns(terms),
+        school: {
+            schoolName: schools.schoolName
+        }
+      })
       .from(terms)
+      .innerJoin(schools, eq(terms.schoolId, schoolId))
       .where(and(eq(terms.id, id), eq(terms.schoolId, schoolId)))
       .limit(1);
 
