@@ -1,5 +1,5 @@
 import express from "express";
-import { departments, NewDepartment, schools } from "../../db/schema";
+import { courses, departments, NewDepartment, schools } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, ne, sql } from "drizzle-orm";
@@ -98,6 +98,37 @@ departmentsRouter.get("/", async (req,res)=> {
         console.error("GET /departments error: ", error);
         return res.status(500).json({error: "There was an error getting the departments"})
     }
+})
+
+departmentsRouter.get("/:id", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+    
+        const { id } = req.params;
+    
+        const [department] = await db
+          .select({
+            ...getTableColumns(departments),
+            school: {
+                schoolName: schools.schoolName
+            },
+            courses: {
+                ...getTableColumns(courses)
+            }
+          })
+          .from(departments)
+          .innerJoin(schools, eq(departments.schoolId, schoolId))
+          .where(and(eq(departments.id, id), eq(departments.schoolId, schoolId)))
+          .limit(1);
+    
+        if (!department) return res.status(404).json({ error: "Department not found" });
+    
+        return res.status(200).json({ data: department });
+      } catch (error) {
+        console.error("GET /departments/:id error:", error);
+        return res.status(500).json({ error: "There was an error getting the department" });
+      }
 })
 
 departmentsRouter.patch("/:id", async (req, res) => {
