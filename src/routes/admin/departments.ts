@@ -12,14 +12,16 @@ departmentsRouter.post("/", async (req, res) => {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
         
-        const {name} = req.body;
+        let {name} = req.body;
         if (typeof name !== "string" || name.trim().length === 0) {
             return res.status(400).json({ error: "name is required" });
         }
 
+        name = name.trim().toUpperCase();
+
         const newDepartment: NewDepartment = {
             id: randomUUID(),
-            name: name.trim(),
+            name: name,
             schoolId,
         };
 
@@ -112,9 +114,6 @@ departmentsRouter.get("/:id", async (req, res) => {
             ...getTableColumns(departments),
             school: {
                 schoolName: schools.schoolName
-            },
-            courses: {
-                ...getTableColumns(courses)
             }
           })
           .from(departments)

@@ -85,7 +85,7 @@ coursesRouter.get("/", async (req ,res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
-        const {search, page = 1, limit = 10} = req.query;
+        const {search, page = 1, limit = 10, departmentId} = req.query;
         
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
@@ -93,6 +93,10 @@ coursesRouter.get("/", async (req ,res) => {
 
         const filterConditions = [];
         filterConditions.push(eq(courses.schoolId, String(schoolId)));
+        
+        if(departmentId){
+            filterConditions.push(eq(courses.departmentId, String(departmentId)));
+        }
 
         if(search){
             const s = String(search).trim();
@@ -119,7 +123,7 @@ coursesRouter.get("/", async (req ,res) => {
             .select({
                 ...getTableColumns(courses), 
                 school: {
-                    ...getTableColumns(schools)
+                    schoolName: schools.schoolName
                 },
                 term: {
                     ...getTableColumns(terms)
