@@ -1,5 +1,5 @@
 import express from "express"
-import { NewTeacherProfile, schools, teacherProfiles, user } from "../../db/schema";
+import { NewTeacherProfile, schools, teacherProfiles, User, user } from "../../db/schema";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 import { getSchoolIdForAdmin } from "../../lib/utils";
@@ -168,6 +168,71 @@ adminTeacherRouter.get("/:id", async (req, res) => {
     } catch (error) {
         console.error("GET /teacher profile error: ", error);
         return res.status(500).json({error: "There was an error getting the teacher profile"});
+    }
+})
+
+adminTeacherRouter.patch("/:id", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {id} = req.params;
+        const {name, email} = req.body;
+
+        const updates: Partial<User> = {}
+
+        if (typeof name === "string") {
+            const trimmedName = name.trim();
+
+            if (trimmedName.length === 0) {
+                return res.status(400).json({ error: "Teacher name cannot be empty" });
+            }
+
+            updates.name = trimmedName;
+        }
+
+        if (typeof email === "string") {
+            const trimmedEmail = email.trim().toLowerCase();
+
+            if (trimmedEmail.length === 0) {
+                return res.status(400).json({ error: "Email cannot be empty" });
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(trimmedEmail)) {
+                return res.status(400).json({ error: "Invalid email address" });
+            }
+
+            updates.email = trimmedEmail;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ error: "No valid fields provided for update" });
+        }
+
+        const [teacherProfile] = await db
+            .select({userId: teacherProfiles.userId})
+            .from(teacherProfiles)
+            .where(and(eq(teacherProfiles.schoolId, schoolId), eq(teacherProfiles.userId, id)))
+            .limit(1);
+
+        if(!teacherProfile){
+            return res.status(404).json({error: "Teacher not found"});
+        }
+
+        const [updatedUser] = await db
+            .update(user)
+            .set(updates)
+            .where(eq(user.id, id))
+            .returning();
+
+        return res.status(200).json({data: {
+            ...teacherProfile, 
+            user: updatedUser, 
+        }})
+    } catch (error) {
+        console.error("PATCH /teacher profile error: ", error);
+        return res.status(500).json({error: "There was an error editing the teacher profile"});
     }
 })
 
