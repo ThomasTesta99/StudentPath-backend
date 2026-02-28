@@ -1,7 +1,7 @@
 import express from "express"
 import { getSchoolIdForAdmin } from "../../lib/utils";
 import { auth } from "../../lib/auth";
-import { NewStudentProfile, schools, studentProfiles, user } from "../../db/schema";
+import { NewStudentProfile, parentProfiles, parentStudentLinks, schools, StudentProfile, studentProfiles, User, user } from "../../db/schema";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, ne, or, sql } from "drizzle-orm";
 
@@ -130,7 +130,7 @@ adminStudentsRouter.get("/", async (req, res) => {
                     ...getTableColumns(user)
                 },
                 school: {
-                    ...getTableColumns(schools)
+                    schoolName: schools.schoolName
                 }
             })
             .from(studentProfiles)
@@ -156,6 +156,42 @@ adminStudentsRouter.get("/", async (req, res) => {
     }
 })
 
+adminStudentsRouter.get("/parents", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {studentId} = req.query;
+
+        const parentList = await db
+            .select({
+                ...getTableColumns(parentStudentLinks), 
+                user: {
+                    ...getTableColumns(user)
+                }
+            })
+            .from(parentStudentLinks)
+            .innerJoin(parentProfiles, eq(parentProfiles.userId, parentStudentLinks.parentId))
+            .innerJoin(user, eq(parentProfiles.userId, user.id))
+            .where(
+                and(
+                    eq(parentProfiles.schoolId, schoolId), 
+                    eq(parentStudentLinks.studentId, String(studentId))
+                ) 
+            );
+
+        return res.status(200).json({
+            data: parentList, 
+            pagination: {
+                total: parentList.length
+            }
+        })
+    } catch (error) {
+        console.error("GET /parents/student error: ", error);
+        return res.status(500).json({error: "There was an error getting the parents"}); 
+    }
+})
+
 adminStudentsRouter.get("/:userId", async (req, res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
@@ -168,10 +204,14 @@ adminStudentsRouter.get("/:userId", async (req, res) => {
                 ...getTableColumns(studentProfiles),
                 user: {
                     ...getTableColumns(user)
+                },
+                school: {
+                    schoolName: schools.schoolName
                 }
             })
             .from(studentProfiles)
             .innerJoin(user, eq(studentProfiles.userId,user.id))
+            .innerJoin(schools, eq(studentProfiles.schoolId, schoolId))
             .where(and(eq(studentProfiles.userId, userId), eq(studentProfiles.schoolId, schoolId)))
             .limit(1);
 
@@ -186,57 +226,80 @@ adminStudentsRouter.get("/:userId", async (req, res) => {
     }
 })
 
+
 adminStudentsRouter.patch("/:userId", async (req, res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const {userId} = req.params;
-        const {gradeLevel, dob, osis} = req.body;
+        const {name, email, gradeLevel, dob, osis} = req.body;
 
-        const updates: Partial<NewStudentProfile> = {};
+        const profileUpdates: Partial<StudentProfile> = {};
+        const userUpdates: Partial<User> = {};
         
-        if(typeof gradeLevel === "string" && gradeLevel.trim().length > 0) updates.gradeLevel = gradeLevel.trim();
+        if(typeof name === "string" && name.trim().length > 0) userUpdates.name = name;
+        if(typeof email === "string" && email.trim().length > 0) userUpdates.name = email;
+        if(typeof gradeLevel === "string" && gradeLevel.trim().length > 0) profileUpdates.gradeLevel = gradeLevel.trim();
         if(typeof dob === "string" && dob.trim().length > 0){
             const d = new Date(dob);
             if (Number.isNaN(d.getTime())) {
                 return res.status(400).json({ error: "dob must be a valid date" });
             }
-            updates.dob = dob.trim();
+            profileUpdates.dob = dob.trim();
         }
         if(typeof osis === "string" && osis.trim().length > 0) {
             if (!/^\d{9}$/.test(osis.trim())) {
                 return res.status(400).json({ error: "osis must be exactly 9 digits" });
             }
-            updates.osis = osis.trim();
+            profileUpdates.osis = osis.trim();
         }
 
-        if(updates.osis){
+        if(profileUpdates.osis){
             const existingOsis = await db
                 .select({count: sql<number>`count(*)`})
                 .from(studentProfiles)
-                .where(and(eq(studentProfiles.schoolId, schoolId), eq(studentProfiles.osis, updates.osis), ne(studentProfiles.userId, userId)));
+                .where(and(eq(studentProfiles.schoolId, schoolId), eq(studentProfiles.osis, profileUpdates.osis), ne(studentProfiles.userId, userId)));
             
             if(existingOsis[0]?.count && existingOsis[0]?.count > 0){
                 return res.status(400).json({error: "OSIS already asigned to a student"});
             }
         }
 
-        if (Object.keys(updates).length === 0) {
+        if (
+            Object.keys(profileUpdates).length === 0 &&
+            Object.keys(userUpdates).length === 0
+        ) {
             return res.status(400).json({ error: "No valid fields provided" });
         }
 
-        const [updatedProfile] = await db
-            .update(studentProfiles)
-            .set(updates)
-            .where(and(eq(studentProfiles.userId, userId), eq(studentProfiles.schoolId, schoolId)))
-            .returning();
+        let updatedProfile = null;
+        let updatedUser = null;
 
-        if(!updatedProfile){
-            return res.status(400).json({error: "Student Profile not found"});
+        if (Object.keys(profileUpdates).length > 0) {
+            [updatedProfile] = await db
+                .update(studentProfiles)
+                .set(profileUpdates)
+                .where(and(eq(studentProfiles.userId, userId), eq(studentProfiles.schoolId, schoolId)))
+                .returning();
+
+            if (!updatedProfile) {
+                return res.status(400).json({ error: "Student Profile not found" });
+            }
         }
 
-        return res.status(200).json({data: updatedProfile});
+        if (Object.keys(userUpdates).length > 0) {
+            [updatedUser] = await db
+                .update(user)
+                .set(userUpdates)
+                .where(eq(user.id, userId))
+                .returning();
+        }
+
+        return res.status(200).json({data: {
+            updatedProfile: updatedProfile, 
+            updatedUser: updatedUser
+        }});
     } catch (error) {
         console.error("PATCH /students error: ", error);
         return res.status(500).json({error: "Failure to update student profile"});

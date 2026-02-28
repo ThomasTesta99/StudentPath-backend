@@ -198,3 +198,58 @@ departmentsRouter.patch("/:id", async (req, res) => {
         return res.status(500).json({error: "There was an error updating the department"});
     }
 } )
+
+departmentsRouter.delete("/:id", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) {
+            return res.status(401).json({ error: "Not authorized" });
+        }
+
+        const { id } = req.params;
+
+        const [existingDept] = await db
+            .select({
+                id: departments.id,
+                schoolId: departments.schoolId,
+                name: departments.name,
+            })
+            .from(departments)
+            .where(and(eq(departments.id, id), eq(departments.schoolId, schoolId)))
+            .limit(1);
+
+        if (!existingDept) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        const [linkedCourse] = await db
+            .select({ id: courses.id })
+            .from(courses)
+            .where(eq(courses.departmentId, id))
+            .limit(1);
+
+        if (linkedCourse) {
+            return res.status(409).json({
+                error: "Cannot delete this department because it still has courses assigned to it",
+            });
+        }
+
+        const [deletedDepartment] = await db
+            .delete(departments)
+            .where(and(eq(departments.id, id), eq(departments.schoolId, schoolId)))
+            .returning();
+
+        if (!deletedDepartment) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        return res.status(200).json({
+            data: deletedDepartment,
+        });
+    } catch (error) {
+        console.error("DELETE /departments/:id error:", error);
+        return res.status(500).json({
+            error: "There was an error deleting the department",
+        });
+    }
+});

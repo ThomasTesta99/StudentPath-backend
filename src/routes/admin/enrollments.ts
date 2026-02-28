@@ -69,6 +69,50 @@ enrollmentsRouter.get("/:courseId/roster", async (req, res) => {
     }
 })
 
+enrollmentsRouter.get("/", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) {
+            return res.status(401).json({ error: "Not authorized" });
+        }
+
+        const {studentId} = req.query;
+        
+        const studentEnrollments = await db
+            .select({
+                ...getTableColumns(enrollments),
+                course: {
+                    ...getTableColumns(courses),
+                },
+                teacher: {
+                    name: user.name
+                }
+            })
+            .from(enrollments)
+            .innerJoin(courses, eq(enrollments.courseId, courses.id))
+            .innerJoin(user, eq(courses.teacherId, user.id))
+            .innerJoin(studentProfiles, eq(enrollments.studentId, studentProfiles.userId))
+            .where(
+                and(
+                    eq(enrollments.studentId, String(studentId)),
+                    eq(studentProfiles.schoolId, schoolId)
+                )
+            );
+
+        return res.status(200).json({
+            data: studentEnrollments,
+            pagination: {
+                total: studentEnrollments.length,
+            },
+        });
+    } catch (error) {
+        console.error("GET /enrollments error:", error);
+        return res.status(500).json({
+            error: "There was an error retrieving the enrollments for this student",
+        });
+    }
+});
+
 enrollmentsRouter.post("/:courseId", async (req, res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
