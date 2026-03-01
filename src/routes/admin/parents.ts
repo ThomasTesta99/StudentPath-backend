@@ -132,23 +132,23 @@ adminParentsRouter.get("/", async (req, res) => {
     }
 })
 
-adminParentsRouter.get("/:userId", async (req, res) => {
+adminParentsRouter.get("/:id", async (req, res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
-        const {userId} = req.params;
+        const {id} = req.params;
 
         const [parent] = await db
             .select({
-                ...getTableColumns(user),
-                profile: {
-                    ...getTableColumns(parentProfiles)
+                ...getTableColumns(parentProfiles),
+                user: {
+                    ...getTableColumns(user)
                 }
             })
             .from(parentProfiles)
             .innerJoin(user, eq(parentProfiles.userId, user.id))
-            .where(and(eq(parentProfiles.userId, userId), eq(parentProfiles.schoolId, schoolId)))
+            .where(and(eq(parentProfiles.userId, id), eq(parentProfiles.schoolId, schoolId)))
             .limit(1);
 
         if(!parent){
@@ -161,6 +161,48 @@ adminParentsRouter.get("/:userId", async (req, res) => {
         return res.status(500).json({error: "There was an error getting the parent"});
     }
 })
+
+adminParentsRouter.delete("/:id", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const { id } = req.params;
+
+        const [existing] = await db
+            .select({ userId: parentProfiles.userId })
+            .from(parentProfiles)
+            .where(
+                and(
+                    eq(parentProfiles.userId, id),
+                    eq(parentProfiles.schoolId, schoolId)
+                )
+            )
+            .limit(1);
+
+        if (!existing) {
+            return res.status(400).json({ error: "No parent profile found" });
+        }
+
+        const deleteUser = await auth.api.removeUser({
+            body: {
+                userId: id,
+            },
+            headers: req.headers,
+        });
+
+        if (deleteUser.success) {
+            return res.status(200).json({
+                message: `Successfully deleted user ${id}`,
+            });
+        } else {
+            return res.status(400).json({ error: "Failed to delete parent." });
+        }
+    } catch (error) {
+        console.error("DELETE /parents error: ", error);
+        return res.status(500).json({ error: "There was an error deleting the parent" });
+    }
+});
 
 adminParentsRouter.post("/invite", async (req, res) => {
     try {
