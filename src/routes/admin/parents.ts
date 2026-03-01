@@ -1,7 +1,7 @@
 import express from "express"
 import { getSchoolIdForAdmin } from "../../lib/utils";
 import { auth } from "../../lib/auth";
-import { NewParentInvite, NewParentProfile, NewUser, parentInvites, parentProfiles, schools, studentProfiles, user } from "../../db/schema";
+import { NewParentInvite, NewParentProfile, NewUser, parentInvites, parentProfiles, schools, studentProfiles, User, user } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
@@ -202,6 +202,73 @@ adminParentsRouter.delete("/:id", async (req, res) => {
         console.error("DELETE /parents error: ", error);
         return res.status(500).json({ error: "There was an error deleting the parent" });
     }
+});
+
+adminParentsRouter.patch("/:id", async (req, res) => {
+  try {
+    const schoolId = await getSchoolIdForAdmin(req);
+    if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+    const { id } = req.params;
+    const { name, email } = req.body;
+
+    const updates: Partial<User> = {};
+
+    if (typeof name === "string") {
+      const trimmedName = name.trim();
+
+      if (trimmedName.length === 0) {
+        return res.status(400).json({ error: "Parent name cannot be empty" });
+      }
+
+      updates.name = trimmedName;
+    }
+
+    if (typeof email === "string") {
+      const trimmedEmail = email.trim().toLowerCase();
+
+      if (trimmedEmail.length === 0) {
+        return res.status(400).json({ error: "Email cannot be empty" });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ error: "Invalid email address" });
+      }
+
+      updates.email = trimmedEmail;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid fields provided for update" });
+    }
+
+    const [parentProfile] = await db
+      .select({ userId: parentProfiles.userId })
+      .from(parentProfiles)
+      .where(and(eq(parentProfiles.schoolId, schoolId), eq(parentProfiles.userId, id)))
+      .limit(1);
+
+    if (!parentProfile) {
+      return res.status(404).json({ error: "Parent not found" });
+    }
+
+    const [updatedUser] = await db
+      .update(user)
+      .set(updates)
+      .where(eq(user.id, id))
+      .returning();
+
+    return res.status(200).json({
+      data: {
+        ...parentProfile,
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    console.error("PATCH /parent profile error: ", error);
+    return res.status(500).json({ error: "There was an error editing the parent profile" });
+  }
 });
 
 adminParentsRouter.post("/invite", async (req, res) => {
