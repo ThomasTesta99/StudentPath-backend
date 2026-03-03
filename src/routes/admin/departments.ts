@@ -12,9 +12,12 @@ departmentsRouter.post("/", async (req, res) => {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
         
-        let {name} = req.body;
+        let {name, code} = req.body;
         if (typeof name !== "string" || name.trim().length === 0) {
             return res.status(400).json({ error: "name is required" });
+        }
+        if(typeof name !== "string" || name.trim().length === 0 || name.trim().length > 3){
+            return res.status(400).json({error: "Department code requirements not met."});
         }
 
         name = name.trim().toUpperCase();
@@ -22,6 +25,7 @@ departmentsRouter.post("/", async (req, res) => {
         const newDepartment: NewDepartment = {
             id: randomUUID(),
             name: name,
+            code: code,
             schoolId,
         };
 
@@ -59,6 +63,7 @@ departmentsRouter.get("/", async (req,res)=> {
             if(s.length > 0){
                 filterConditions.push(
                     ilike(departments.name, `%${s}%`),
+                    ilike(departments.code, `%${s}%`),
                 )
             }
         }
@@ -133,7 +138,7 @@ departmentsRouter.get("/:id", async (req, res) => {
 departmentsRouter.patch("/:id", async (req, res) => {
     try {
         const {id} = req.params;
-        const {name} = req.body;
+        const {name, code} = req.body;
 
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
@@ -147,6 +152,13 @@ departmentsRouter.patch("/:id", async (req, res) => {
             }
             updates.name = trimmed;
         }
+        if(typeof code === "string"){
+            if(code.trim().length === 0 || code.trim().length > 3){
+                return res.status(400).json({error: "Department code requirements not met."});
+            }
+            updates.code = code.trim();
+        }
+        
 
         if(Object.keys(updates).length === 0){
             return res.status(400).json({error: "No valid fields to update"});
