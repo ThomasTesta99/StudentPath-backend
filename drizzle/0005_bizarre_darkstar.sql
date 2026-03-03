@@ -1,0 +1,1 @@
+ALTER TABLE "departments" ALTER COLUMN "code" SET NOT NULL;

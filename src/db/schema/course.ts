@@ -6,7 +6,7 @@ import { timestamps } from "./timestamps";
 export const departments = pgTable("departments", {
     id: text("id").primaryKey(), 
     name: text("name").notNull(),
-    code: text("code"),
+    code: text("code").notNull(),
     schoolId: text("school_id").notNull().references(() => schools.id, { onDelete: "cascade" }),
     ...timestamps
 },
