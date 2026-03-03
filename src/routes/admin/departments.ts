@@ -2,7 +2,7 @@ import express from "express";
 import { courses, departments, NewDepartment, schools } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
-import { and, desc, eq, getTableColumns, ilike, ne, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, ilike, ne, or, sql } from "drizzle-orm";
 import { getSchoolIdForAdmin } from "../../lib/utils";
 
 export const departmentsRouter = express.Router();
@@ -16,11 +16,12 @@ departmentsRouter.post("/", async (req, res) => {
         if (typeof name !== "string" || name.trim().length === 0) {
             return res.status(400).json({ error: "name is required" });
         }
-        if(typeof name !== "string" || name.trim().length === 0 || name.trim().length > 3){
+        if(typeof code !== "string" || code.trim().length === 0 || code.trim().length > 3){
             return res.status(400).json({error: "Department code requirements not met."});
         }
 
         name = name.trim().toUpperCase();
+        code = code.trim().toUpperCase();
 
         const newDepartment: NewDepartment = {
             id: randomUUID(),
@@ -62,8 +63,10 @@ departmentsRouter.get("/", async (req,res)=> {
             const s = String(search).trim();
             if(s.length > 0){
                 filterConditions.push(
-                    ilike(departments.name, `%${s}%`),
-                    ilike(departments.code, `%${s}%`),
+                    or(
+                        ilike(departments.name, `%${s}%`),
+                        ilike(departments.code, `%${s}%`),
+                    )
                 )
             }
         }
@@ -190,6 +193,26 @@ departmentsRouter.patch("/:id", async (req, res) => {
             if (duplicate) {
                 return res.status(409).json({
                 error: "A department with that name already exists in this school",
+                });
+            }
+        }
+
+        if (updates.code) {
+            const [duplicateCode] = await db
+                .select({ id: departments.id })
+                .from(departments)
+                .where(
+                    and(
+                        eq(departments.schoolId, existingDept.schoolId),
+                        eq(departments.code, updates.code),
+                        ne(departments.id, id),
+                    )
+                )
+                .limit(1);
+
+            if (duplicateCode) {
+                return res.status(409).json({
+                    error: "A department with that code already exists in this school",
                 });
             }
         }
