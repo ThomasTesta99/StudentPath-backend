@@ -6,11 +6,13 @@ import { timestamps } from "./timestamps";
 export const departments = pgTable("departments", {
     id: text("id").primaryKey(), 
     name: text("name").notNull(),
+    code: text("code").notNull(),
     schoolId: text("school_id").notNull().references(() => schools.id, { onDelete: "cascade" }),
     ...timestamps
 },
   (table) => ([
     uniqueIndex("departments_school_name_unique").on(table.schoolId, table.name),
+    uniqueIndex("departments_school_code_unique").on(table.schoolId, table.code), 
     index("departments_school_id_idx").on(table.schoolId),
     index("departments_name_idx").on(table.name),
   ])
