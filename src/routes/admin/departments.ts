@@ -156,10 +156,11 @@ departmentsRouter.patch("/:id", async (req, res) => {
             updates.name = trimmed;
         }
         if(typeof code === "string"){
-            if(code.trim().length === 0 || code.trim().length > 3){
+            const normalizedCode = code.trim().toUpperCase();
+            if(normalizedCode.length === 0 || normalizedCode.length > 3){
                 return res.status(400).json({error: "Department code requirements not met."});
             }
-            updates.code = code.trim();
+            updates.code = normalizedCode;
         }
         
 
