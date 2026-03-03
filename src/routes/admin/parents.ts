@@ -1,7 +1,7 @@
 import express from "express"
 import { getSchoolIdForAdmin } from "../../lib/utils";
 import { auth } from "../../lib/auth";
-import { NewParentInvite, NewParentProfile, NewUser, parentInvites, parentProfiles, schools, studentProfiles, User, user } from "../../db/schema";
+import { NewParentInvite, NewParentProfile, NewUser, parentInvites, parentProfiles, parentStudentLinks, schools, studentProfiles, User, user } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
@@ -131,6 +131,42 @@ adminParentsRouter.get("/", async (req, res) => {
         return res.status(500).json({error: "There was an error getting the parents"});
     }
 })
+
+adminParentsRouter.get("/students", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const { parentId } = req.query;
+        
+        const studentList = await db
+            .select({
+                ...getTableColumns(parentStudentLinks),
+                user: {
+                    ...getTableColumns(user),
+                },
+            })
+            .from(parentStudentLinks)
+            .innerJoin(studentProfiles, eq(studentProfiles.userId, parentStudentLinks.studentId))
+            .innerJoin(user, eq(studentProfiles.userId, user.id))
+            .where(
+                and(
+                    eq(studentProfiles.schoolId, schoolId),
+                    eq(parentStudentLinks.parentId, String(parentId))
+                )
+            );
+
+        return res.status(200).json({
+            data: studentList,
+            pagination: {
+                total: studentList.length,
+            },
+        });
+    } catch (error) {
+        console.error("GET /parents/students error: ", error);
+        return res.status(500).json({ error: "There was an error getting the students" });
+    }
+});
 
 adminParentsRouter.get("/:id", async (req, res) => {
     try {
@@ -273,7 +309,7 @@ adminParentsRouter.patch("/:id", async (req, res) => {
 
 adminParentsRouter.post("/invite", async (req, res) => {
     try {
-         const schoolId = await getSchoolIdForAdmin(req);
+        const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
         const {studentId, parentEmail} = req.body;
@@ -320,6 +356,8 @@ adminParentsRouter.post("/invite", async (req, res) => {
         return res.status(201).json({
             data: {
                 inviteId: newInvite.id, 
+                studentId, 
+                parentEmail: normalizedEmail,
                 token: token, 
                 expiresAt: expiresAt, 
             }
