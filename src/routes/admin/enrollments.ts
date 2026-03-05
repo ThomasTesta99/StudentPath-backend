@@ -113,13 +113,12 @@ enrollmentsRouter.get("/", async (req, res) => {
     }
 });
 
-enrollmentsRouter.post("/:courseId", async (req, res) => {
+enrollmentsRouter.post("/", async (req, res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
-        const {courseId} = req.params;
-        const {studentId} = req.body;
+        const {studentId,courseId} = req.body;
 
         if (typeof studentId !== "string" || studentId.trim().length === 0) {
             return res.status(400).json({ error: "studentId is required" });
