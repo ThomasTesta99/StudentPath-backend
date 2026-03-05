@@ -4,12 +4,7 @@ import { gradeLevelEnum, NewSchool, NewSchoolGradeLevel, School, schoolGradeLeve
 import { db } from '../../db';
 import { randomUUID } from 'crypto';
 import { getSchoolIdForAdmin, normalizeGradeLevels } from '../../lib/utils';
-
-export type GradeLevel = (typeof gradeLevelEnum.enumValues)[number];
-type PatchSchoolBody = {
-  schoolName?: string;
-  gradeLevels?: GradeLevel[];
-};
+import { PatchSchoolBody } from '../../types';
 
 export const schoolsRouter = express.Router();
 
@@ -42,7 +37,30 @@ schoolsRouter.get("/me", async(req, res) => {
         console.error("GET /school error: ", error);
         res.status(500).json({error: "Failed to fetch school"});
     }
-})
+});
+
+schoolsRouter.get("/me/grade-levels", async (req, res) => {
+  try {
+    const schoolId = await getSchoolIdForAdmin(req);
+    if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+    const gradeLevelRows = await db
+      .select({ gradeLevel: schoolGradeLevels.gradeLevel })
+      .from(schoolGradeLevels)
+      .where(eq(schoolGradeLevels.schoolId, schoolId));
+
+    const sorted = gradeLevelRows
+        .map((g) => g.gradeLevel)
+        .sort((a, b) => Number(a) - Number(b));
+
+    return res.status(200).json({
+      data: sorted,
+    });
+  } catch (error) {
+    console.error("GET /schools/me/grade-levels error:", error);
+    return res.status(500).json({ error: "Failed to fetch grade levels" });
+  }
+});
 
 schoolsRouter.get("/", async (req, res) => {
     try {

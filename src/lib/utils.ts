@@ -3,7 +3,7 @@ import { db } from "../db";
 import { adminProfiles } from "../db/schema";
 import { auth } from "./auth";
 import { Request } from "express";
-import { GradeLevel } from "../routes/admin/schools";
+import { GradeLevel } from "../types";
 
 export const getSchoolIdForAdmin = async (req: Request) => {
     try {
@@ -45,4 +45,20 @@ export function normalizeGradeLevels(gradeLevels: GradeLevel[]): GradeLevel[] {
     }
   }
   return out;
+}
+
+
+export function isValidTime(t: string) {
+  return /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(t);
+}
+
+export function normalizeTime(t: string) {
+  return t.length === 5 ? `${t}:00` : t;
+}
+
+export function timeLT(a: string, b: string) {
+  return normalizeTime(a) < normalizeTime(b);
+}
+export function timeLE(a: string, b: string) {
+  return normalizeTime(a) <= normalizeTime(b);
 }
