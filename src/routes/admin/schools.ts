@@ -1,10 +1,48 @@
 import express from 'express';
-import { and, desc, eq, ilike, sql } from 'drizzle-orm';
-import { NewSchool, School, schools } from '../../db/schema';
+import { and, desc, eq, getTableColumns, ilike, sql } from 'drizzle-orm';
+import { gradeLevelEnum, NewSchool, NewSchoolGradeLevel, School, schoolGradeLevels, schools } from '../../db/schema';
 import { db } from '../../db';
 import { randomUUID } from 'crypto';
+import { getSchoolIdForAdmin, normalizeGradeLevels } from '../../lib/utils';
+
+export type GradeLevel = (typeof gradeLevelEnum.enumValues)[number];
+type PatchSchoolBody = {
+  schoolName?: string;
+  gradeLevels?: GradeLevel[];
+};
 
 export const schoolsRouter = express.Router();
+
+schoolsRouter.get("/me", async(req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const [school] = await db
+            .select()
+            .from(schools)
+            .where(eq(schools.id, schoolId))
+            .limit(1);
+
+        if(!school){
+            return res.status(404).json({error: "School not found"})
+        }
+        const gradeLevelRows = await db
+            .select({ gradeLevel: schoolGradeLevels.gradeLevel })
+            .from(schoolGradeLevels)
+            .where(eq(schoolGradeLevels.schoolId, schoolId));
+
+        return res.status(200).json({
+            data: {
+                ...school, 
+                gradeLevels: gradeLevelRows.map((grade)=> grade.gradeLevel),
+            }
+        })
+    } catch (error) {
+        console.error("GET /school error: ", error);
+        res.status(500).json({error: "Failed to fetch school"});
+    }
+})
 
 schoolsRouter.get("/", async (req, res) => {
     try {
@@ -81,14 +119,21 @@ schoolsRouter.post("/", async (req, res) => {
     }
 });
 
-schoolsRouter.patch("/:id", async (req, res) => {
+schoolsRouter.patch("/me", async (req, res) => {
     try {
-        const {id} = req.params;
-        const {schoolName} = req.body;
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+        const {schoolName, gradeLevels} = req.body as PatchSchoolBody;
 
         const updates: Partial<NewSchool> = {};
+        const hasSchoolName = typeof schoolName === "string";
+        const hasGradeLevels = gradeLevels !== undefined;
+        
+        if(!hasGradeLevels && !hasSchoolName){
+            return res.status(400).json({error: "No valid fields to update"});
+        }
 
-        if(typeof schoolName === "string"){
+        if(hasSchoolName){
             const trimmed = schoolName.trim();
             if(trimmed.length === 0){
                 return res.status(400).json({error: "Must enter school name"});
@@ -96,21 +141,63 @@ schoolsRouter.patch("/:id", async (req, res) => {
             updates.schoolName = trimmed;
         }
 
-        if(Object.keys(updates).length === 0){
-            return res.status(400).json({error: "No valid fields to update"});
-        }
+        const normalized = hasGradeLevels ? normalizeGradeLevels(gradeLevels) : [];
 
-        const [updated] = await db
-            .update(schools)
-            .set(updates)
-            .where(eq(schools.id, id))
-            .returning({id: schools.id, schoolName: schools.schoolName});
+        const result = await db.transaction(async (tx) => {
+            let schoolRow: {id: string, schoolName: string} | undefined;
 
-        if(!updated){
+            if(Object.keys(updates).length > 0){
+                const [updated] = await tx
+                    .update(schools)
+                    .set(updates)
+                    .where(eq(schools.id, schoolId))
+                    .returning({id: schools.id, schoolName: schools.schoolName});
+                schoolRow = updated;
+            } else{
+                const [existing] = await tx
+                    .select({id: schools.id, schoolName: schools.schoolName})
+                    .from(schools)
+                    .where(eq(schools.id, schoolId))
+                    .limit(1);
+                schoolRow = existing;
+            }
+
+            if(!schoolRow) return null;
+
+            if(hasGradeLevels){
+                await tx
+                    .delete(schoolGradeLevels)
+                    .where(eq(schoolGradeLevels.schoolId, schoolId));
+
+                if(normalized.length > 0){
+                    const rows: NewSchoolGradeLevel[] = normalized.map(
+                        (gradeLevel) => ({
+                            id: randomUUID(), 
+                            schoolId: schoolId, 
+                            gradeLevel: gradeLevel
+                        }),
+                    );
+                    await tx.insert(schoolGradeLevels).values(rows);
+                }
+            }
+
+            const gradeLevels = await tx
+                .select({gradeLevel: schoolGradeLevels.gradeLevel})
+                .from(schoolGradeLevels)
+                .where(eq(schoolGradeLevels.schoolId, schoolId));
+
+            return {
+                ...schoolRow, 
+                gradeLevels: gradeLevels.map((g) => g.gradeLevel),
+            };
+        });
+
+        if(!result){
             return res.status(404).json({error: "School not found"});
         }
-
-        return res.status(200).json({data: updated});
+        return res.status(200).json({
+            data: result
+        });
     } catch (error) {
         console.error("PATCH /schools/:id error: ", error);
         return res.status(500).json({error: "Failed to update school"});

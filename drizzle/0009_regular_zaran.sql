@@ -1,0 +1,4 @@
+-- ALTER TABLE "school_grade_levels" ADD PRIMARY KEY ("id");--> statement-breakpoint
+-- ALTER TABLE "school_grade_levels" ALTER COLUMN "id" SET DATA TYPE uuid;--> statement-breakpoint
+-- ALTER TABLE "school_grade_levels" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();--> statement-breakpoint
+-- ALTER TABLE "school_grade_levels" ALTER COLUMN "id" SET NOT NULL;
