@@ -72,13 +72,13 @@ export const sections = pgTable("sections", {
 )
 
 export const enrollments = pgTable("enrollments", {
-    courseId: text("course_id").notNull().references(() => courses.id, {onDelete: 'cascade'}), 
+    sectionId: text("section_id").notNull().references(() => sections.id, {onDelete: 'cascade'}), 
     studentId: text("student_id").notNull().references(() => user.id, {onDelete: "cascade"}),
     ...timestamps
 },
   (table) => ([
-    primaryKey({ columns: [table.courseId, table.studentId] }),
-    index("enrollments_course_id_idx").on(table.courseId),
+    primaryKey({ columns: [table.sectionId, table.studentId] }),
+    index("enrollments_section_id_idx").on(table.sectionId),
     index("enrollments_student_id_idx").on(table.studentId),
   ])
 );

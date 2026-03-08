@@ -116,10 +116,3 @@ export function optionalPositiveInt(value: unknown, fieldName: string): number |
 
   return n;
 }
-
-export function hasStringValue(value: unknown): boolean {
-  if(typeof value === "string" && value.trim().length > 0){
-    true;
-  }
-  return false;
-}
