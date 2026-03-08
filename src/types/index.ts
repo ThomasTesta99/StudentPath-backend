@@ -20,3 +20,13 @@ export type CreatePeriodBody = {
   startTime: string;      
   endTime: string;         
 };
+
+export type PatchSectionBody = {
+  termId?: string;
+  courseId?: string;
+  periodId?: string;
+  teacherId?: string;
+  capacity?: number | string;
+  roomNumber?: string;
+  sectionLabel?: string;
+};

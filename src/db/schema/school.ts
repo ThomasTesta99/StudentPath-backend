@@ -48,7 +48,6 @@ export const bellSchedules = pgTable("bell_schedules", {
 
 export const periods = pgTable("periods", {
     id: text("id").primaryKey(), 
-    schoolId: text("school_id").notNull().references(() => schools.id, { onDelete: "cascade" }),
     bellScheduleId: text("bell_schedule_id").notNull().references(() => bellSchedules.id, {onDelete: 'cascade'}),
     number: integer("number").notNull(), 
     startTime: time("start_time").notNull(), 
@@ -56,10 +55,8 @@ export const periods = pgTable("periods", {
     ...timestamps,
 },
     (table) => [
-        index("period_school_id_idx").on(table.schoolId), 
         index("periods_bell_schedule_id_idx").on(table.bellScheduleId), 
-        uniqueIndex("periods_bell_schedule_number_uq").on(table.number),
-        index("periods_school_schedule_idx").on(table.schoolId, table.bellScheduleId),
+        uniqueIndex("periods_bell_schedule_number_uq").on(table.bellScheduleId, table.number),
     ]
 )
 

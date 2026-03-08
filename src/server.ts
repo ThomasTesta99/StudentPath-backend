@@ -14,6 +14,7 @@ import { enrollmentsRouter } from './routes/admin/enrollments';
 import { parentInvitesRouter } from './routes/parents/redeemInvite';
 import { adminParentsRouter } from './routes/admin/parents';
 import { bellScheduleRouter } from './routes/admin/bell-scheudle';
+import { sectionsRouter } from './routes/admin/sections';
 
 const app = express();
 const PORT = 8000;
@@ -33,13 +34,14 @@ app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.use(express.json());
 
-// ADMIN ROUTES
+// ADMIN ROUTES(TO DO: use string validation functions in utils)
 app.use("/api/admin/schools", requireAuth, requireRole(['admin']), schoolsRouter);
 app.use("/api/admin/bell-schedule", requireAuth, requireRole(['admin']), bellScheduleRouter);
 app.use("/api/admin/terms", requireAuth, requireRole(["admin"]), termsRouter);
 app.use("/api/admin/teachers", requireAuth, requireRole(["admin"]), adminTeacherRouter);
 app.use("/api/admin/departments", requireAuth, requireRole(["admin"]), departmentsRouter);
 app.use("/api/admin/courses", requireAuth, requireRole(["admin"]), coursesRouter);
+app.use("/api/admin/sections", requireAuth, requireRole(["admin"]), sectionsRouter);
 app.use("/api/admin/students", requireAuth, requireRole(["admin"]), adminStudentsRouter);
 app.use("/api/admin/enrollments", requireAuth, requireRole(["admin"]), enrollmentsRouter);
 app.use("/api/admin/parents", requireAuth, requireRole(["admin"]), adminParentsRouter);

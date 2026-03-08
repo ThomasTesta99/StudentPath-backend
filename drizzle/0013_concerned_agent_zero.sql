@@ -1,0 +1,1 @@
+ALTER TABLE "sections" ALTER COLUMN "section_label" SET NOT NULL;
