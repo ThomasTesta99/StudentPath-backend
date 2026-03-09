@@ -13,7 +13,7 @@ coursesRouter.post("/", async (req, res) => {
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
         const {departmentId, name, gradeLevel, code, description} = req.body;
 
-        const required = {schoolId, departmentId, name, code, description};
+        const required = {schoolId, gradeLevel, departmentId, name, code, description};
         for(const [k,v] of Object.entries(required)){
             if(typeof v !== "string" || v.trim().length === 0){
                 return res.status(400).json({error: `${k} is required`});

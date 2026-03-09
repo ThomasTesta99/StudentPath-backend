@@ -13,7 +13,7 @@ import { adminStudentsRouter } from './routes/admin/students';
 import { enrollmentsRouter } from './routes/admin/enrollments';
 import { parentInvitesRouter } from './routes/parents/redeemInvite';
 import { adminParentsRouter } from './routes/admin/parents';
-import { bellScheduleRouter } from './routes/admin/bell-scheudle';
+import { bellScheduleRouter } from './routes/admin/bell-schedule';
 import { sectionsRouter } from './routes/admin/sections';
 
 const app = express();

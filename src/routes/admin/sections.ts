@@ -108,8 +108,7 @@ sectionsRouter.get("/", async (req, res) => {
                     or(
                         ilike(sections.sectionLabel, `%${s}%`),
                         ilike(courses.code, `%${s}%`),
-                        ilike(courses.name, `%${s}%`),
-                        
+                        ilike(courses.name, `%${s}%`), 
                     )
                 )
             }
@@ -126,10 +125,11 @@ sectionsRouter.get("/", async (req, res) => {
         const whereClause = and(...filterConditions);
 
         const countResult = await db
-            .select({count: sql<number>`count(*)`})
-            .from(sections)
-            .where(whereClause);
-        
+          .select({ count: sql<number>`count(*)` })
+          .from(sections)
+          .innerJoin(courses, eq(sections.courseId, courses.id))
+          .where(whereClause);
+          
         const totalCount = countResult[0]?.count ?? 0;
 
         const sectionsList = await db

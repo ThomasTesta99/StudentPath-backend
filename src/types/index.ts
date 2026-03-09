@@ -30,3 +30,13 @@ export type PatchSectionBody = {
   roomNumber?: string;
   sectionLabel?: string;
 };
+
+export const ALLOWED_GRADE_LEVELS = [
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+] as const;

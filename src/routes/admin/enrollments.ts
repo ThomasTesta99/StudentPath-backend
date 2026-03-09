@@ -149,7 +149,7 @@ enrollmentsRouter.post("/", async (req, res) => {
     }
 
     const [section] = await db
-      .select({ id: sections.id })
+      .select()
       .from(sections)
       .where(and(eq(sections.schoolId, schoolId), eq(sections.id, sectionId)))
       .limit(1);
@@ -171,6 +171,16 @@ enrollmentsRouter.post("/", async (req, res) => {
 
     if (!student) {
       return res.status(404).json({ error: "No student found" });
+    }
+
+    const count = await db
+      .select({count: sql<number>`count(*)`})
+      .from(enrollments)
+      .where(eq(enrollments.sectionId, sectionId));
+
+    const totalCount = Number(count[0]?.count ?? 0);
+    if(section.capacity !== null && totalCount >= section.capacity){
+      return res.status(400).json({error: "Section is full"});
     }
 
     const newEnrollment: NewEnrollment = {

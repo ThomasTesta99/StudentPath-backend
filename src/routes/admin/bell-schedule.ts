@@ -164,7 +164,6 @@ bellScheduleRouter.post("/periods", async (req, res) => {
 
         const newPeriod: NewPeriod = {
             id: randomUUID(),
-            schoolId,
             bellScheduleId: schedule.id,
             number,
             startTime: start,
