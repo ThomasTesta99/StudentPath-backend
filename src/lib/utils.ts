@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { adminProfiles } from "../db/schema";
+import { adminProfiles, gradeLevelEnum } from "../db/schema";
 import { auth } from "./auth";
 import { Request } from "express";
+import { GradeLevel } from "../types";
 
 export const getSchoolIdForAdmin = async (req: Request) => {
     try {
@@ -28,4 +29,90 @@ export const getSchoolIdForAdmin = async (req: Request) => {
     } catch (error) {
         console.error("There was an error getting the school", error);
     }
+}
+
+const ALLOWED_GRADE_LEVELS = new Set<GradeLevel>(
+  gradeLevelEnum.enumValues as GradeLevel[]
+);
+
+export function parseGradeLevel(raw: string): GradeLevel {
+  const trimmed = raw.trim();
+
+  if (!ALLOWED_GRADE_LEVELS.has(trimmed as GradeLevel)) {
+    throw new Error(
+      `Invalid gradeLevel. Allowed: ${gradeLevelEnum.enumValues.join(", ")}`
+    );
+  }
+
+  return trimmed as GradeLevel;
+}
+
+export function normalizeGradeLevels(gradeLevels: GradeLevel[]): GradeLevel[] {
+  const out: GradeLevel[] = [];
+  const seen = new Set<GradeLevel>();
+  for (const g of gradeLevels) {
+    if (!seen.has(g)) {
+      seen.add(g);
+      out.push(g);
+    }
+  }
+  return out;
+}
+
+
+export function isValidTime(t: string) {
+  return /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(t);
+}
+
+export function normalizeTime(t: string) {
+  return t.length === 5 ? `${t}:00` : t;
+}
+
+export function timeLT(a: string, b: string) {
+  return normalizeTime(a) < normalizeTime(b);
+}
+export function timeLE(a: string, b: string) {
+  return normalizeTime(a) <= normalizeTime(b);
+}
+
+export function requireTrimmedString(value: unknown, fieldName: string): string {
+  if (typeof value !== "string") {
+    throw new Error(`${fieldName} is required`);
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    throw new Error(`${fieldName} is required`);
+  }
+  return trimmed;
+}
+
+export function optionalTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function requirePositiveInt(value: unknown, fieldName: string): number {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error(`${fieldName} must be a positive integer`);
+  }
+  return n;
+}
+
+export function optionalPositiveInt(value: unknown, fieldName: string): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : NaN;
+
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new Error(`${fieldName} must be a positive integer`);
+  }
+
+  return n;
 }

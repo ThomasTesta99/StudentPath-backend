@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "sections_school_term_course_label_uq" ON "sections" USING btree ("school_id","term_id","course_id","section_label");

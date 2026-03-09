@@ -1,0 +1,11 @@
+-- CREATE TYPE "public"."grade_level" AS ENUM('6', '7', '8', '9', '10', '11', '12');--> statement-breakpoint
+-- CREATE TABLE "school_grade_levels" (
+-- 	"school_id" text NOT NULL,
+-- 	"grade_level" "grade_level" NOT NULL,
+-- 	"created_at" timestamp DEFAULT now() NOT NULL,
+-- 	"updated_at" timestamp DEFAULT now() NOT NULL
+-- );
+-- --> statement-breakpoint
+-- ALTER TABLE "school_grade_levels" ADD CONSTRAINT "school_grade_levels_school_id_schools_id_fk" FOREIGN KEY ("school_id") REFERENCES "public"."schools"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+-- CREATE INDEX "school_grade_levels_school_id_idx" ON "school_grade_levels" USING btree ("school_id");--> statement-breakpoint
+-- CREATE UNIQUE INDEX "school_grade_levels_school_grade_uq" ON "school_grade_levels" USING btree ("school_id","grade_level");
