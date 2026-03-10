@@ -142,7 +142,7 @@ schoolsRouter.patch("/me", async (req, res) => {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
         const {schoolName, gradeLevels} = req.body as PatchSchoolBody;
-
+        
         const updates: Partial<NewSchool> = {};
         const hasSchoolName = typeof schoolName === "string";
         const hasGradeLevels = gradeLevels !== undefined;

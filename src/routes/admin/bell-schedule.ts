@@ -19,8 +19,6 @@ bellScheduleRouter.get("/", async (req, res) => {
             .where(eq(bellSchedules.schoolId, schoolId))
             .limit(1);
 
-        if(!schedule) return res.status(400).json({error: "There was an error getting the bell schedule"});
-
         return res.status(200).json({data: schedule});
     } catch (error) {
         console.error("GET /bell-schedule error:", error);
@@ -108,13 +106,13 @@ bellScheduleRouter.get("/periods", async (req, res) => {
     }
 })
 
-bellScheduleRouter.post("/periods", async (req, res) => {
+bellScheduleRouter.post("/period", async (req, res) => {
     try {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
     
         const body = req.body as CreatePeriodBody;
-        const {bellScheduleId, number, startTime, endTime} = body;
+        const {number, startTime, endTime} = body;
 
         if (typeof number !== "number" || !Number.isInteger(number) || number <= 0) {
             return res.status(400).json({ error: "number must be a positive integer" });
@@ -179,5 +177,47 @@ bellScheduleRouter.post("/periods", async (req, res) => {
     } catch (error) {
         console.error("POST /bell-schedule/me/periods error:", error);
         return res.status(500).json({ error: "Failed to create period" });
+    }
+})
+
+bellScheduleRouter.delete("/:id", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {id} = req.params;
+
+        const [deleted] = await db
+            .delete(bellSchedules)
+            .where(and(eq(bellSchedules.id, id), eq(bellSchedules.schoolId, schoolId)))
+            .returning();
+
+        if(!deleted) return res.status(400).json({error: "No bell-schedule found"});
+
+        return res.status(200).json({data: deleted});
+    } catch (error) {
+        console.error("DELETE /bell-schedule/:id error: ", error);
+        return res.status(500).json({error: "There was an error deleting the bell-schedule"});
+    }
+})
+
+bellScheduleRouter.delete("/period/:id", async (req, res) => {
+    try {
+        const schoolId = await getSchoolIdForAdmin(req);
+        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+
+        const {id} = req.params;
+
+        const [deleted] = await db
+            .delete(periods)
+            .where(eq(periods.id, id))
+            .returning();
+
+        if(!deleted) return res.status(400).json({error: "No period found"});
+
+        return res.status(200).json({data: deleted});
+    } catch (error) {
+        console.error("DELETE /period/:id error: ", error);
+        return res.status(500).json({error: "There was an error deleting the period"});
     }
 })
