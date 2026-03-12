@@ -91,7 +91,7 @@ sectionsRouter.get("/", async (req, res) => {
         const schoolId = await getSchoolIdForAdmin(req);
         if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
-        const {search, page = 1, limit = 10, courseId, periodId} = req.query;
+        const {search, page = 1, limit = 10, courseId, periodId, termId} = req.query;
         
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
@@ -120,6 +120,10 @@ sectionsRouter.get("/", async (req, res) => {
 
         if(periodId){
             filterConditions.push(eq(sections.periodId, String(periodId)));
+        }
+
+        if(termId){
+          filterConditions.push(eq(sections.termId, String(termId)));
         }
 
         const whereClause = and(...filterConditions);
