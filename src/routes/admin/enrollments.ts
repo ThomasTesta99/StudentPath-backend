@@ -318,16 +318,6 @@ enrollmentsRouter.post("/", async (req, res) => {
       return res.status(400).json({ error: "studentId is required" });
     }
 
-    const [section] = await db
-      .select()
-      .from(sections)
-      .where(and(eq(sections.schoolId, schoolId), eq(sections.id, sectionId)))
-      .limit(1);
-
-    if (!section) {
-      return res.status(404).json({ error: "No section found" });
-    }
-
     const [student] = await db
       .select({ id: studentProfiles.userId })
       .from(studentProfiles)
@@ -343,83 +333,120 @@ enrollmentsRouter.post("/", async (req, res) => {
       return res.status(404).json({ error: "No student found" });
     }
 
-    const count = await db
-      .select({count: sql<number>`count(*)`})
-      .from(enrollments)
-      .where(eq(enrollments.sectionId, sectionId));
-
-    const totalCount = Number(count[0]?.count ?? 0);
-    if(section.capacity !== null && totalCount >= section.capacity){
-      return res.status(400).json({error: "Section is full"});
-    }
-
-    const existingStudentEnrollments = await db
-      .select({
-        enrollment: {
-          ...getTableColumns(enrollments),
-        },
-        section: {
-          ...getTableColumns(sections),
-        },
-      })
-      .from(enrollments)
-      .innerJoin(sections, eq(enrollments.sectionId, sections.id))
-      .innerJoin(
-        studentProfiles,
-        and(
-          eq(enrollments.studentId, studentProfiles.userId),
-          eq(studentProfiles.schoolId, schoolId)
-        )
-      )
-      .where(
-        and(
-          eq(enrollments.studentId, studentId),
-          eq(sections.schoolId, schoolId),
-          eq(sections.termId, section.termId)
-        )
-      );
-
-    const sameCourseEnrollment = existingStudentEnrollments.find(
-      (item) => item.section.courseId === section.courseId
-    );
-
-    if (sameCourseEnrollment) {
-      return res.status(409).json({
-        error: "Student is already enrolled in this course for the selected term",
-      });
-    }
-
-    const samePeriodEnrollment = existingStudentEnrollments.find(
-      (item) =>
-        item.section.periodId === section.periodId
-    );
-
-    if (samePeriodEnrollment) {
-      return res.status(409).json({
-        error: "Student already has another section during this period for the selected term",
-      });
-    }
-
     const newEnrollment: NewEnrollment = {
       sectionId,
       studentId,
     };
 
-    const [enrollmentResult] = await db
-      .insert(enrollments)
-      .values(newEnrollment)
-      .onConflictDoNothing()
-      .returning();
+    const enrollmentResult = await db.transaction(async (tx) => {
+      const [section] = await tx
+        .select()
+        .from(sections)
+        .where(and(eq(sections.schoolId, schoolId), eq(sections.id, sectionId)))
+        .limit(1);
 
-    if (!enrollmentResult) {
-      return res
-        .status(409)
-        .json({ error: "Student is already enrolled in this section" });
-    }
+      if (!section) {
+        throw new Error("SECTION_NOT_FOUND");
+      }
+
+      await tx.execute(
+        sql`select 1 from ${sections} where ${sections.id} = ${sectionId} for update`
+      );
+
+      const countResult = await tx
+        .select({ count: sql<number>`count(*)` })
+        .from(enrollments)
+        .where(eq(enrollments.sectionId, sectionId));
+
+      const totalCount = Number(countResult[0]?.count ?? 0);
+
+      if (section.capacity !== null && totalCount >= section.capacity) {
+        throw new Error("SECTION_FULL");
+      }
+
+      const existingStudentEnrollments = await tx
+        .select({
+          enrollment: {
+            ...getTableColumns(enrollments),
+          },
+          section: {
+            ...getTableColumns(sections),
+          },
+        })
+        .from(enrollments)
+        .innerJoin(sections, eq(enrollments.sectionId, sections.id))
+        .innerJoin(
+          studentProfiles,
+          and(
+            eq(enrollments.studentId, studentProfiles.userId),
+            eq(studentProfiles.schoolId, schoolId)
+          )
+        )
+        .where(
+          and(
+            eq(enrollments.studentId, studentId),
+            eq(sections.schoolId, schoolId),
+            eq(sections.termId, section.termId)
+          )
+        );
+
+      const sameCourseEnrollment = existingStudentEnrollments.find(
+        (item) => item.section.courseId === section.courseId
+      );
+
+      if (sameCourseEnrollment) {
+        throw new Error("DUPLICATE_COURSE_ENROLLMENT");
+      }
+
+      const samePeriodEnrollment =
+        section.periodId === null
+          ? undefined
+          : existingStudentEnrollments.find(
+              (item) => item.section.periodId === section.periodId
+            );
+
+      if (samePeriodEnrollment) {
+        throw new Error("SCHEDULE_CONFLICT");
+      }
+
+      const [created] = await tx
+        .insert(enrollments)
+        .values(newEnrollment)
+        .onConflictDoNothing()
+        .returning();
+
+      if (!created) {
+        throw new Error("ALREADY_ENROLLED");
+      }
+
+      return created;
+    });
 
     return res.status(201).json({ data: enrollmentResult });
   } catch (error) {
-    console.error("POST /enrollments error: ", error);
+    console.error("POST /enrollments error:", error);
+
+    if (error instanceof Error) {
+      switch (error.message) {
+        case "SECTION_NOT_FOUND":
+          return res.status(404).json({ error: "No section found" });
+        case "SECTION_FULL":
+          return res.status(400).json({ error: "Section is full" });
+        case "DUPLICATE_COURSE_ENROLLMENT":
+          return res.status(409).json({
+            error: "Student is already enrolled in this course for the selected term",
+          });
+        case "SCHEDULE_CONFLICT":
+          return res.status(409).json({
+            error: "Student already has another section during this period for the selected term",
+          });
+        case "ALREADY_ENROLLED":
+          return res.status(409).json({
+            error: "Student is already enrolled in this section",
+          });
+      }
+    }
+
     return res
       .status(500)
       .json({ error: "There was an error creating the enrollment" });
