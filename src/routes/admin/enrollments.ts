@@ -164,7 +164,7 @@ enrollmentsRouter.get("/student/:studentId", async (req, res) => {
       .innerJoin(courses, eq(sections.courseId, courses.id))
       .innerJoin(teacherUser, eq(sections.teacherId, teacherUser.id))
       .innerJoin(studentProfiles, eq(enrollments.studentId, studentProfiles.userId))
-      .innerJoin(studentUser, eq(studentUser.id, studentId))
+      .innerJoin(studentUser, eq(studentUser.id, enrollments.studentId))
       .where(whereClause)
       .orderBy(desc(enrollments.createdAt));
 
@@ -339,6 +339,14 @@ enrollmentsRouter.post("/", async (req, res) => {
     };
 
     const enrollmentResult = await db.transaction(async (tx) => {
+      await tx.execute(sql`
+        select 1
+        from ${sections}
+        where ${sections.schoolId} = ${schoolId}
+          and ${sections.id} = ${sectionId}
+        for update
+      `);
+
       const [section] = await tx
         .select()
         .from(sections)
@@ -363,6 +371,14 @@ enrollmentsRouter.post("/", async (req, res) => {
       if (section.capacity !== null && totalCount >= section.capacity) {
         throw new Error("SECTION_FULL");
       }
+
+      await tx.execute(sql`
+        select 1
+        from ${studentProfiles}
+        where ${studentProfiles.userId} = ${studentId}
+          and ${studentProfiles.schoolId} = ${schoolId}
+        for update
+     `);
 
       const existingStudentEnrollments = await tx
         .select({
