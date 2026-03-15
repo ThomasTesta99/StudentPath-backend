@@ -1,6 +1,6 @@
 import express from "express"
 import { getSchoolIdForAdmin, optionalPositiveInt, optionalTrimmedString, requirePositiveInt, requireTrimmedString } from "../../lib/utils";
-import { bellSchedules, courses, departments, NewSection, periods, sections, teacherProfiles, terms, user } from "../../db/schema";
+import { bellSchedules, courses, departments, enrollments, NewSection, periods, sections, teacherProfiles, terms, user } from "../../db/schema";
 import { randomUUID } from "crypto";
 import { db } from "../../db";
 import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
@@ -87,99 +87,119 @@ sectionsRouter.post("/", async (req, res) => {
 });
 
 sectionsRouter.get("/", async (req, res) => {
-    try {
-        const schoolId = await getSchoolIdForAdmin(req);
-        if (!schoolId) return res.status(401).json({ error: "Not authorized" });
+  try {
+    const schoolId = await getSchoolIdForAdmin(req);
+    if (!schoolId) return res.status(401).json({ error: "Not authorized" });
 
-        const {search, page = 1, limit = 10, courseId, periodId, termId} = req.query;
-        
-        const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
-        const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
-        const offset = (currentPage - 1) * limitPerPage;
+    const {search, page = 1, limit = 10, courseId, periodId, termId} = req.query;
+    
+    const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
+    const offset = (currentPage - 1) * limitPerPage;
 
 
-        const filterConditions = [];
-        filterConditions.push(eq(sections.schoolId, schoolId));
+    const filterConditions = [];
+    filterConditions.push(eq(sections.schoolId, schoolId));
 
-        if(search){
-            const s = requireTrimmedString(search, "search");
-            if(s.length > 0){
-                filterConditions.push(
-                    or(
-                        ilike(sections.sectionLabel, `%${s}%`),
-                        ilike(courses.code, `%${s}%`),
-                        ilike(courses.name, `%${s}%`), 
-                    )
+    if(search){
+        const s = requireTrimmedString(search, "search");
+        if(s.length > 0){
+            filterConditions.push(
+                or(
+                    ilike(sections.sectionLabel, `%${s}%`),
+                    ilike(courses.code, `%${s}%`),
+                    ilike(courses.name, `%${s}%`), 
                 )
-            }
+            )
         }
-
-        if(courseId){
-            filterConditions.push(eq(sections.courseId, String(courseId)));
-        }
-
-        if(periodId){
-            filterConditions.push(eq(sections.periodId, String(periodId)));
-        }
-
-        if(termId){
-          filterConditions.push(eq(sections.termId, String(termId)));
-        }
-
-        const whereClause = and(...filterConditions);
-
-        const countResult = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(sections)
-          .innerJoin(courses, eq(sections.courseId, courses.id))
-          .where(whereClause);
-          
-        const totalCount = countResult[0]?.count ?? 0;
-
-        const sectionsList = await db
-            .select({
-                ...getTableColumns(sections), 
-                term: {
-                    ...getTableColumns(terms), 
-                },
-                course: {
-                    ...getTableColumns(courses) 
-                },
-                period: {
-                    ...getTableColumns(periods), 
-                },
-                department: {
-                    ...getTableColumns(departments)
-                },  
-                teacher: {
-                    ...getTableColumns(user)
-                }
-            })
-            .from(sections)
-            .innerJoin(periods, eq(sections.periodId, periods.id))
-            .innerJoin(terms, eq(sections.termId, terms.id))
-            .innerJoin(teacherProfiles, eq(sections.teacherId, teacherProfiles.userId))
-            .innerJoin(user, eq(teacherProfiles.userId, user.id))
-            .innerJoin(courses, eq(sections.courseId, courses.id))
-            .innerJoin(departments, eq(courses.departmentId, departments.id))
-            .where(whereClause)
-            .limit(limitPerPage)
-            .offset(offset)
-            .orderBy(desc(sections.createdAt));
-
-        return res.status(200).json({
-            data: sectionsList, 
-            pagination: {
-                page: currentPage,
-                limit: limitPerPage,
-                total: totalCount,
-                totalPages: Math.ceil(totalCount / limitPerPage),
-            }, 
-        })
-    } catch (error) {
-        console.error("GET /sections error:", error);
-        return res.status(500).json({ error: "There was an error getting the section" });
     }
+
+    if(courseId){
+        filterConditions.push(eq(sections.courseId, String(courseId)));
+    }
+
+    if(periodId){
+        filterConditions.push(eq(sections.periodId, String(periodId)));
+    }
+
+    if(termId){
+      filterConditions.push(eq(sections.termId, String(termId)));
+    }
+
+    const whereClause = and(...filterConditions);
+
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(sections)
+      .innerJoin(courses, eq(sections.courseId, courses.id))
+      .where(whereClause);
+      
+    const totalCount = countResult[0]?.count ?? 0;
+
+    const sectionsList = await db
+      .select({
+        ...getTableColumns(sections),
+        enrolledCount: sql<number>`count(${enrollments.studentId})`,
+        term: {
+          ...getTableColumns(terms),
+        },
+        course: {
+          ...getTableColumns(courses),
+        },
+        period: {
+          ...getTableColumns(periods),
+        },
+        department: {
+          ...getTableColumns(departments),
+        },
+        teacher: {
+          ...getTableColumns(user),
+        },
+      })
+      .from(sections)
+      .innerJoin(periods, eq(sections.periodId, periods.id))
+      .innerJoin(terms, eq(sections.termId, terms.id))
+      .innerJoin(teacherProfiles, eq(sections.teacherId, teacherProfiles.userId))
+      .innerJoin(user, eq(teacherProfiles.userId, user.id))
+      .innerJoin(courses, eq(sections.courseId, courses.id))
+      .innerJoin(departments, eq(courses.departmentId, departments.id))
+      .leftJoin(enrollments, eq(enrollments.sectionId, sections.id))
+      .where(whereClause)
+      .groupBy(
+        sections.id,
+        terms.id,
+        courses.id,
+        periods.id,
+        departments.id,
+        user.id,
+        teacherProfiles.userId
+      )
+      .limit(limitPerPage)
+      .offset(offset)
+      .orderBy(desc(sections.createdAt));
+
+    const formattedSections = sectionsList.map((section) => ({
+      ...section,
+      enrolledCount: Number(section.enrolledCount ?? 0),
+      availableSeats:
+        section.capacity == null
+          ? null
+          : Math.max(section.capacity - Number(section.enrolledCount ?? 0), 0),
+    }));
+
+    return res.status(200).json({
+      data: formattedSections, 
+      pagination: {
+        page: currentPage,
+        limit: limitPerPage,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limitPerPage),
+      }, 
+    })
+  } catch (error) {
+      console.error("GET /sections error:", error);
+      return res.status(500).json({ error: "There was an error getting the section" });
+  }
 })
 
 sectionsRouter.get("/:id", async (req, res) => {
