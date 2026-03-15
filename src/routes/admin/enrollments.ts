@@ -6,6 +6,7 @@ import {
   courses,
   enrollments,
   NewEnrollment,
+  periods,
   sections,
   studentProfiles,
   user,
@@ -100,17 +101,17 @@ enrollmentsRouter.get("/:sectionId/roster", async (req, res) => {
 
     return res.status(200).json({
       data: roster,
-      meta: {
-        section: sectionResult.section,
-        course: sectionResult.course,
-        teacher: sectionResult.teacher,
-        capacity: sectionResult.section.capacity,
-        enrolledCount: totalCount,
-        availableSeats:
-          sectionResult.section.capacity === null
-            ? null
-            : Math.max(sectionResult.section.capacity - totalCount, 0),
-      },
+      // meta: {
+      //   section: sectionResult.section,
+      //   course: sectionResult.course,
+      //   teacher: sectionResult.teacher,
+      //   capacity: sectionResult.section.capacity,
+      //   enrolledCount: totalCount,
+      //   availableSeats:
+      //     sectionResult.section.capacity === null
+      //       ? null
+      //       : Math.max(sectionResult.section.capacity - totalCount, 0),
+      // },
       pagination: {
         page: currentPage,
         limit: limitPerPage,
@@ -233,6 +234,7 @@ enrollmentsRouter.get("/", async (req, res) => {
           ilike(studentUser.email, searchTerm),
           ilike(studentProfiles.osis, searchTerm),
           ilike(courses.name, searchTerm),
+          ilike(courses.code, searchTerm),
           ilike(sections.sectionLabel, searchTerm),
           ilike(teacherUser.name, searchTerm)
         )!
@@ -264,7 +266,10 @@ enrollmentsRouter.get("/", async (req, res) => {
           gradeLevel: studentProfiles.gradeLevel, 
         }, 
         section: {
-          ...getTableColumns(sections), 
+          ...getTableColumns(sections),
+        },
+        period: {
+          ...getTableColumns(periods), 
         }, 
         course: {
           ...getTableColumns(courses), 
@@ -277,6 +282,7 @@ enrollmentsRouter.get("/", async (req, res) => {
       })
       .from(enrollments)
       .innerJoin(sections, eq(enrollments.sectionId, sections.id))
+      .innerJoin(periods, eq(sections.periodId, periods.id))
       .innerJoin(courses, eq(sections.courseId, courses.id))
       .innerJoin(studentProfiles, eq(enrollments.studentId, studentProfiles.userId))
       .innerJoin(studentUser, eq(enrollments.studentId, studentUser.id))
