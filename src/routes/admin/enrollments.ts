@@ -1,14 +1,17 @@
 import express from "express";
-import { getSchoolIdForAdmin, optionalTrimmedString } from "../../lib/utils";
+import { getSchoolIdForAdmin, optionalTrimmedString, requireTrimmedString } from "../../lib/utils";
 import { db } from "../../db";
-import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 import {
+  bellSchedules,
   courses,
   enrollments,
   NewEnrollment,
   periods,
+  schools,
   sections,
   studentProfiles,
+  terms,
   user,
 } from "../../db/schema";
 import { alias } from "drizzle-orm/pg-core";
@@ -139,44 +142,108 @@ enrollmentsRouter.get("/student/:studentId", async (req, res) => {
       return res.status(400).json({ error: "studentId is required" });
     }
 
-    const filterConditions = [
-      eq(enrollments.studentId, studentId),
-      eq(studentProfiles.schoolId, schoolId),
-      eq(sections.schoolId, schoolId),
-      eq(courses.schoolId, schoolId)
-    ];
-
-    if(termId){
-      filterConditions.push(eq(sections.termId, termId));
+    if (!termId) {
+      return res.status(400).json({ error: "termId is required" });
     }
 
-    const whereClause = and(...filterConditions);
+    const [student] = await db
+      .select({ userId: studentProfiles.userId })
+      .from(studentProfiles)
+      .where(
+        and(
+          eq(studentProfiles.userId, studentId),
+          eq(studentProfiles.schoolId, schoolId)
+        )
+      )
+      .limit(1);
 
-    const studentEnrollments = await db
+    if (!student) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    const [term] = await db
+      .select({ id: terms.id })
+      .from(terms)
+      .where(
+        and(
+          eq(terms.id, termId),
+          eq(terms.schoolId, schoolId)
+        )
+      )
+      .limit(1);
+
+    if (!term) {
+      return res.status(404).json({ error: "Term not found" });
+    }
+
+    const [bellSchedule] = await db
+      .select({ id: bellSchedules.id })
+      .from(bellSchedules)
+      .where(eq(bellSchedules.schoolId, schoolId))
+      .limit(1);
+
+    if (!bellSchedule) {
+      return res.status(404).json({ error: "Bell schedule not found for this school" });
+    }
+
+    const scheduleRows = await db
       .select({
-        ...getTableColumns(enrollments),
+        period: { ...getTableColumns(periods) },
+        enrollment: { ...getTableColumns(enrollments) },
         section: { ...getTableColumns(sections) },
         course: { ...getTableColumns(courses) },
-        teacher: { name: teacherUser.name },
-        student: { ...getTableColumns(studentUser) }
+        teacher: {
+          id: teacherUser.id,
+          name: teacherUser.name,
+        },
+        isEnrolled: sql<boolean>`
+          case when ${enrollments.studentId} is not null then true else false end
+        `.as("isEnrolled"),
       })
-      .from(enrollments)
-      .innerJoin(sections, eq(enrollments.sectionId, sections.id))
-      .innerJoin(courses, eq(sections.courseId, courses.id))
-      .innerJoin(teacherUser, eq(sections.teacherId, teacherUser.id))
-      .innerJoin(studentProfiles, eq(enrollments.studentId, studentProfiles.userId))
-      .innerJoin(studentUser, eq(studentUser.id, enrollments.studentId))
-      .where(whereClause)
-      .orderBy(desc(enrollments.createdAt));
+      .from(periods)
+      .leftJoin(
+        sections,
+        and(
+          eq(sections.periodId, periods.id),
+          eq(sections.termId, termId),
+          eq(sections.schoolId, schoolId),
+          sql`exists (
+            select 1
+            from ${enrollments}
+            where ${enrollments.sectionId} = ${sections.id}
+              and ${enrollments.studentId} = ${studentId}
+          )`
+        )
+      )
+      .leftJoin(
+        enrollments,
+        and(
+          eq(enrollments.sectionId, sections.id),
+          eq(enrollments.studentId, studentId)
+        )
+      )
+      .leftJoin(
+        courses,
+        and(
+          eq(courses.id, sections.courseId),
+          eq(courses.schoolId, schoolId)
+        )
+      )
+      .leftJoin(
+        teacherUser,
+        eq(teacherUser.id, sections.teacherId)
+      )
+      .where(eq(periods.bellScheduleId, bellSchedule.id))
+      .orderBy(asc(periods.number));
 
     return res.status(200).json({
-      data: studentEnrollments,
-      pagination: { total: studentEnrollments.length },
+      data: scheduleRows,
+      pagination: { total: scheduleRows.length },
     });
   } catch (error) {
     console.error("GET /enrollments/student/:studentId error:", error);
     return res.status(500).json({
-      error: "There was an error retrieving the enrollments for this student",
+      error: "There was an error retrieving the schedule for this student",
     });
   }
 });
