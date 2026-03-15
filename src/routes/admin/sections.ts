@@ -129,12 +129,20 @@ sectionsRouter.get("/", async (req, res) => {
     const whereClause = and(...filterConditions);
 
     const countResult = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({
+        count: sql<number>`count(distinct ${sections.id})`,
+      })
       .from(sections)
+      .innerJoin(periods, eq(sections.periodId, periods.id))
+      .innerJoin(terms, eq(sections.termId, terms.id))
+      .innerJoin(teacherProfiles, eq(sections.teacherId, teacherProfiles.userId))
+      .innerJoin(user, eq(teacherProfiles.userId, user.id))
       .innerJoin(courses, eq(sections.courseId, courses.id))
+      .innerJoin(departments, eq(courses.departmentId, departments.id))
+      .leftJoin(enrollments, eq(enrollments.sectionId, sections.id))
       .where(whereClause);
-      
-    const totalCount = countResult[0]?.count ?? 0;
+
+    const totalCount = Number(countResult[0]?.count ?? 0);
 
     const sectionsList = await db
       .select({
