@@ -16,6 +16,7 @@ import { adminParentsRouter } from './routes/admin/parents';
 import { bellScheduleRouter } from './routes/admin/bell-schedule';
 import { sectionsRouter } from './routes/admin/sections';
 import { teacherSectionRouter } from './routes/teacher/sections';
+import { teacherTermsRouter } from './routes/teacher/terms';
 
 const app = express();
 const PORT = 8000;
@@ -48,6 +49,7 @@ app.use("/api/admin/enrollments", requireAuth, requireRole(["admin"]), enrollmen
 app.use("/api/admin/parents", requireAuth, requireRole(["admin"]), adminParentsRouter);
 
 // TEACHER ROUTES
+app.use("/api/teacher/terms", requireAuth, requireRole(['teacher']), teacherTermsRouter);
 app.use("/api/teacher/sections", requireAuth, requireRole(["teacher"]), teacherSectionRouter);
 
 // PARENT ROUTES
