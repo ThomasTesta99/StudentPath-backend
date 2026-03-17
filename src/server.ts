@@ -48,7 +48,7 @@ app.use("/api/admin/enrollments", requireAuth, requireRole(["admin"]), enrollmen
 app.use("/api/admin/parents", requireAuth, requireRole(["admin"]), adminParentsRouter);
 
 // TEACHER ROUTES
-app.use("/api/teacher/sections", requireAuth, requireRole(["teacher", "admin"]), teacherSectionRouter);
+app.use("/api/teacher/sections", requireAuth, requireRole(["teacher"]), teacherSectionRouter);
 
 // PARENT ROUTES
 app.use("/api/parents", requireAuth, requireRole(["parent"]), parentInvitesRouter);
