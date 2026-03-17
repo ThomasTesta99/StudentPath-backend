@@ -15,6 +15,7 @@ import { parentInvitesRouter } from './routes/parents/redeemInvite';
 import { adminParentsRouter } from './routes/admin/parents';
 import { bellScheduleRouter } from './routes/admin/bell-schedule';
 import { sectionsRouter } from './routes/admin/sections';
+import { teacherSectionRouter } from './routes/teacher/sections';
 
 const app = express();
 const PORT = 8000;
@@ -45,6 +46,9 @@ app.use("/api/admin/sections", requireAuth, requireRole(["admin"]), sectionsRout
 app.use("/api/admin/students", requireAuth, requireRole(["admin"]), adminStudentsRouter);
 app.use("/api/admin/enrollments", requireAuth, requireRole(["admin"]), enrollmentsRouter);
 app.use("/api/admin/parents", requireAuth, requireRole(["admin"]), adminParentsRouter);
+
+// TEACHER ROUTES
+app.use("/api/teacher/sections", requireAuth, requireRole(["teacher", "admin"]), teacherSectionRouter);
 
 // PARENT ROUTES
 app.use("/api/parents", requireAuth, requireRole(["parent"]), parentInvitesRouter);
