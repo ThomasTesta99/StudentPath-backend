@@ -7,13 +7,18 @@ import { GradeLevel } from "../types";
 
 export const getSchoolIdForAdmin = async (req: Request) => {
     try {
-        const session = await auth.api.getSession({headers: req.headers});
-        if(!session?.user?.id){
-            console.error("No valid session");
-            return;
-        }
+        let userId = "";
 
-        const userId = session.user.id;
+        if(!req.user?.id){
+          const session = await auth.api.getSession({headers: req.headers});
+          if(!session?.user?.id){
+              console.error("No valid session");
+              return;
+          }
+          userId = session.user.id;
+        }else{
+          userId = req.user.id;
+        }
 
         const [schoolId] = await db
             .select({schoolId: adminProfiles.schoolId})
@@ -33,13 +38,18 @@ export const getSchoolIdForAdmin = async (req: Request) => {
 
 export const getTeacherInformation = async (req: Request) => {
   try {
-    const session = await auth.api.getSession({headers: req.headers});
-    if(!session?.user.id){
-      console.error("No valid session");
-      return;
+    let userId = "";
+
+    if(!req.user?.id){
+      const session = await auth.api.getSession({headers: req.headers});
+      if(!session?.user?.id){
+        console.error("No valid session");
+        return;
+      }
+      userId = session.user.id;
+    }else{
+      userId = req.user.id;
     }
-    
-    const userId = session.user.id;
 
     const [teacher] = await db
       .select({
@@ -61,6 +71,7 @@ export const getTeacherInformation = async (req: Request) => {
     return teacher;
   } catch (error) {
     console.error("There was an error getting the teacher: ", error);
+    throw error;
   }
 }
 
