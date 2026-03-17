@@ -1,19 +1,24 @@
-import { eq } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
 import { db } from "../db";
-import { adminProfiles, gradeLevelEnum } from "../db/schema";
+import { adminProfiles, gradeLevelEnum, teacherProfiles, user } from "../db/schema";
 import { auth } from "./auth";
 import { Request } from "express";
 import { GradeLevel } from "../types";
 
 export const getSchoolIdForAdmin = async (req: Request) => {
     try {
-        const session = await auth.api.getSession({headers: req.headers});
-        if(!session?.user?.id){
-            console.error("No valid session");
-            return;
-        }
+        let userId = "";
 
-        const userId = session.user.id;
+        if(!req.user?.id){
+          const session = await auth.api.getSession({headers: req.headers});
+          if(!session?.user?.id){
+              console.error("No valid session");
+              return;
+          }
+          userId = session.user.id;
+        }else{
+          userId = req.user.id;
+        }
 
         const [schoolId] = await db
             .select({schoolId: adminProfiles.schoolId})
@@ -29,6 +34,45 @@ export const getSchoolIdForAdmin = async (req: Request) => {
     } catch (error) {
         console.error("There was an error getting the school", error);
     }
+}
+
+export const getTeacherInformation = async (req: Request) => {
+  try {
+    let userId = "";
+
+    if(!req.user?.id){
+      const session = await auth.api.getSession({headers: req.headers});
+      if(!session?.user?.id){
+        console.error("No valid session");
+        return;
+      }
+      userId = session.user.id;
+    }else{
+      userId = req.user.id;
+    }
+
+    const [teacher] = await db
+      .select({
+        ...getTableColumns(teacherProfiles),
+        user: {
+          ...getTableColumns(user)
+        }
+      })
+      .from(teacherProfiles)
+      .innerJoin(user, eq(teacherProfiles.userId, user.id))
+      .where(eq(teacherProfiles.userId, userId))
+      .limit(1);
+
+    if(!teacher){
+      console.error("Invalid user");
+      return;
+    }
+
+    return teacher;
+  } catch (error) {
+    console.error("There was an error getting the teacher: ", error);
+    throw error;
+  }
 }
 
 const ALLOWED_GRADE_LEVELS = new Set<GradeLevel>(
