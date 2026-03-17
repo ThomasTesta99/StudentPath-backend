@@ -1,5 +1,5 @@
 import express from 'express'
-import { getTeacherInformation } from '../../lib/utils';
+import { getTeacherInformation, optionalTrimmedString } from '../../lib/utils';
 import { db } from '../../db';
 import { and, asc, countDistinct, eq, getTableColumns } from 'drizzle-orm';
 import {
@@ -26,6 +26,18 @@ teacherSectionRouter.get("/", async (req, res) => {
 
         const schoolId = teacher.schoolId;
         const userId = teacher.userId;
+
+        const termId = optionalTrimmedString(req.query.termId);
+        const filterConditions = [
+            eq(sections.teacherId, userId),
+            eq(sections.schoolId, schoolId)
+        ];
+
+        if(termId){
+            filterConditions.push(eq(sections.termId, termId));
+        }
+
+        const whereClause = and(...filterConditions);
 
         const teacherSections = await db
             .select({
@@ -62,10 +74,7 @@ teacherSectionRouter.get("/", async (req, res) => {
             .leftJoin(bellSchedules, eq(bellSchedules.id, periods.bellScheduleId))
             .leftJoin(enrollments, eq(enrollments.sectionId, sections.id))
             .where(
-                and(
-                    eq(sections.teacherId, userId),
-                    eq(sections.schoolId, schoolId)
-                )
+                whereClause
             )
             .groupBy(
                 sections.id, 
