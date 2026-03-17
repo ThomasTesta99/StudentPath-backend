@@ -10,6 +10,8 @@ import {
   enrollments,
   teacherProfiles,
   bellSchedules,
+  studentProfiles,
+  user,
 } from "../../db/schema";
 
 export const teacherSectionRouter = express.Router();
@@ -155,3 +157,77 @@ teacherSectionRouter.get("/:sectionId", async (req, res) => {
         return res.status(500).json({error: "There was an error getting the section information"})
     }
 })
+
+teacherSectionRouter.get("/:sectionId/students", async (req, res) => {
+  try {
+    const teacher = await getTeacherInformation(req);
+
+    if (!teacher) {
+      return res.status(401).json({ error: "Not authorized" });
+    }
+
+    const schoolId = teacher.schoolId;
+    const userId = teacher.userId;
+    const { sectionId } = req.params;
+
+    const [ownedSection] = await db
+      .select({ id: sections.id })
+      .from(sections)
+      .innerJoin(
+        teacherProfiles,
+        and(
+          eq(teacherProfiles.userId, sections.teacherId),
+          eq(teacherProfiles.schoolId, schoolId)
+        )
+      )
+      .where(
+        and(
+          eq(sections.id, sectionId),
+          eq(sections.teacherId, userId),
+          eq(sections.schoolId, schoolId)
+        )
+      )
+      .limit(1);
+
+    if (!ownedSection) {
+      return res.status(404).json({ error: "Section not found" });
+    }
+
+    const students = await db
+      .select({
+        studentId: studentProfiles.userId,
+        name: user.name,
+        osis: studentProfiles.osis,
+        gradeLevel: studentProfiles.gradeLevel,
+        enrollmentCreatedAt: enrollments.createdAt,
+      })
+      .from(enrollments)
+      .innerJoin(
+        sections,
+        and(
+          eq(sections.id, enrollments.sectionId),
+          eq(sections.schoolId, schoolId),
+          eq(sections.teacherId, userId)
+        )
+      )
+      .innerJoin(
+        studentProfiles,
+        and(
+          eq(studentProfiles.userId, enrollments.studentId),
+          eq(studentProfiles.schoolId, schoolId)
+        )
+      )
+      .innerJoin(user, eq(user.id, studentProfiles.userId))
+      .where(eq(enrollments.sectionId, sectionId))
+      .orderBy(user.name);
+
+    return res.status(200).json({
+      data: students,
+    });
+  } catch (error) {
+    console.error("GET /teacher/sections/:sectionId/students error:", error);
+    return res.status(500).json({
+      error: "There was an error getting the section roster",
+    });
+  }
+});
