@@ -1,7 +1,7 @@
 import express from 'express'
 import { getTeacherInformation, optionalTrimmedString } from '../../lib/utils';
 import { db } from '../../db';
-import { and, asc, countDistinct, eq, getTableColumns } from 'drizzle-orm';
+import { and, asc, countDistinct, eq, getTableColumns, sql } from 'drizzle-orm';
 import {
   sections,
   courses,
@@ -228,7 +228,10 @@ teacherSectionRouter.get("/:sectionId/students", async (req, res) => {
       )
       .innerJoin(user, eq(user.id, studentProfiles.userId))
       .where(eq(enrollments.sectionId, sectionId))
-      .orderBy(user.name);
+      .orderBy(
+        sql`split_part(${user.name}, ' ', array_length(string_to_array(${user.name}, ' '), 1)) asc`,
+        sql`${user.name} asc`
+      );
 
     return res.status(200).json({
       data: students,
