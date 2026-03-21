@@ -1,9 +1,9 @@
 import { eq, getTableColumns } from "drizzle-orm";
 import { db } from "../db";
-import { adminProfiles, gradeLevelEnum, teacherProfiles, user } from "../db/schema";
+import { adminProfiles, assignmentTypeEnum, gradeLevelEnum, teacherProfiles, user } from "../db/schema";
 import { auth } from "./auth";
 import { Request } from "express";
-import { GradeLevel } from "../types";
+import { AssignmentType, GradeLevel } from "../types";
 
 export const getSchoolIdForAdmin = async (req: Request) => {
     try {
@@ -159,4 +159,67 @@ export function optionalPositiveInt(value: unknown, fieldName: string): number |
   }
 
   return n;
+}
+
+export function requireDateString(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${fieldName} is required`);
+  }
+
+  const trimmed = value.trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format`);
+  }
+
+  const parsed = new Date(trimmed);
+  if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== trimmed) {
+    throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format`);
+  }
+
+  return trimmed;
+}
+
+export function requireAssignmentType(value: unknown, fieldName: string): AssignmentType {
+  if (typeof value !== "string") {
+    throw new Error(`${fieldName} is required`);
+  }
+
+  const trimmed = value.trim();
+
+  if (!(assignmentTypeEnum.enumValues as readonly string[]).includes(trimmed)) {
+    throw new Error(`${fieldName} must be a valid assignment type`);
+  }
+
+  return trimmed as AssignmentType;
+}
+
+export function requireStringArray(value: unknown, fieldName: string): string[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be an array`);
+  }
+
+  if (value.length === 0) {
+    throw new Error(`${fieldName} must contain at least one value`);
+  }
+
+  const cleaned = value.map((item, index) => {
+    if (typeof item !== "string") {
+      throw new Error(`${fieldName}[${index}] must be a string`);
+    }
+    const trimmed = item.trim();
+    if (trimmed.length === 0) {
+      throw new Error(`${fieldName}[${index}] must be a non-empty string`);
+    }
+    return trimmed;
+  });
+
+  return [...new Set(cleaned)];
+}
+
+export function getLocalDateString(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }

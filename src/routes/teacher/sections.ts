@@ -1,7 +1,7 @@
 import express from 'express'
-import { getTeacherInformation, optionalTrimmedString } from '../../lib/utils';
+import { getLocalDateString, getTeacherInformation, optionalTrimmedString } from '../../lib/utils';
 import { db } from '../../db';
-import { and, asc, countDistinct, eq, getTableColumns, sql } from 'drizzle-orm';
+import { and, asc, countDistinct, desc, eq, getTableColumns, gte, ilike, lt, sql } from 'drizzle-orm';
 import {
   sections,
   courses,
@@ -12,10 +12,12 @@ import {
   bellSchedules,
   studentProfiles,
   user,
+  assignments,
+  assignmentTypeEnum,
 } from "../../db/schema";
+import { AssignmentType } from '../../types';
 
 export const teacherSectionRouter = express.Router();
-
 
 teacherSectionRouter.get("/", async (req, res) => {
     try {
@@ -243,3 +245,92 @@ teacherSectionRouter.get("/:sectionId/students", async (req, res) => {
     });
   }
 });
+
+teacherSectionRouter.get("/:sectionId/assignments", async (req, res) => {
+    try {
+        const teacher = await getTeacherInformation(req);
+        if (!teacher) {
+        return res.status(401).json({ error: "Not authorized" });
+        }
+
+        const {sectionId} = req.params;
+        const {search, page = 1, limit = 10} = req.query;
+        const type = optionalTrimmedString(req.query.type);
+        const status = optionalTrimmedString(req.query.status);
+        
+        const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+        const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
+        const offset = (currentPage - 1) * limitPerPage;
+
+        const [section] = await db
+            .select()
+            .from(sections)
+            .where(
+                and(
+                    eq(sections.id, sectionId),
+                    eq(sections.teacherId, teacher.userId),
+                )
+            )
+            .limit(1);
+
+        if(!section){
+            return res.status(404).json({error: "No section found"});
+        }
+
+        const filterConditions = [eq(assignments.sectionId, sectionId)];
+
+        if(search){
+            const s = String(search).trim();
+            if(s.length > 0){
+                filterConditions.push(
+                    ilike(assignments.title, `%${s}%`),
+                )
+            }
+        }
+
+        if(type){
+            if((assignmentTypeEnum.enumValues as readonly string[]).includes(type)){
+                filterConditions.push(eq(assignments.type, type as AssignmentType));
+            }
+        }
+        
+        if(status){
+            const today = getLocalDateString();
+            if(status === "upcoming"){
+                filterConditions.push(gte(assignments.dueDate, today));
+            }else if(status === "past"){
+                filterConditions.push(lt(assignments.dueDate, today));
+            }
+        }
+
+        const whereClause = and(...filterConditions);
+
+        const countResult = await db
+            .select({count: sql<number>`count(*)`})
+            .from(assignments)
+            .where(whereClause);
+
+        const totalCount = countResult[0]?.count ?? 0;
+
+        const assignmentList = await db
+            .select()
+            .from(assignments)
+            .where(whereClause)
+            .limit(limitPerPage)
+            .offset(offset)
+            .orderBy(desc(assignments.createdAt));
+
+        return res.status(200).json({
+            data: assignmentList, 
+            pagination: {
+                page: currentPage,
+                limit: limitPerPage,
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limitPerPage),
+            }, 
+        });
+    } catch (error) {
+       console.error("GET /:sectionId/assignments error: ", error);
+       return res.status(500).json({error:"There was an error getting this section's assignments"}); 
+    }
+})

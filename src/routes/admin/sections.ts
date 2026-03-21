@@ -268,7 +268,7 @@ sectionsRouter.patch("/:id", async (req, res) => {
     const { id } = req.params;
     const body = req.body as PatchSectionBody;
 
-    const updates: Partial<typeof sections.$inferInsert> = {};
+    const updates: Partial<NewSection> = {};
 
     if (body.termId !== undefined) updates.termId = body.termId.trim();
     if (body.courseId !== undefined) updates.courseId = body.courseId.trim();

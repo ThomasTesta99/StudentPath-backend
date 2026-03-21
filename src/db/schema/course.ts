@@ -92,6 +92,5 @@ export type NewCourse = typeof courses.$inferInsert;
 export type Section = typeof sections.$inferSelect;
 export type NewSection = typeof sections.$inferInsert;
 
-
 export type Enrollment = typeof enrollments.$inferSelect;
 export type NewEnrollment = typeof enrollments.$inferInsert;
