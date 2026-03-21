@@ -1,5 +1,5 @@
 import express from 'express'
-import { getTeacherInformation, optionalTrimmedString } from '../../lib/utils';
+import { getLocalDateString, getTeacherInformation, optionalTrimmedString } from '../../lib/utils';
 import { db } from '../../db';
 import { and, asc, countDistinct, desc, eq, getTableColumns, gte, ilike, lt, sql } from 'drizzle-orm';
 import {
@@ -295,7 +295,7 @@ teacherSectionRouter.get("/:sectionId/assignments", async (req, res) => {
         }
         
         if(status){
-            const today = new Date().toISOString().slice(0, 10);
+            const today = getLocalDateString();
             if(status === "upcoming"){
                 filterConditions.push(gte(assignments.dueDate, today));
             }else if(status === "past"){
