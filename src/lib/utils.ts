@@ -1,9 +1,9 @@
 import { eq, getTableColumns } from "drizzle-orm";
 import { db } from "../db";
-import { adminProfiles, gradeLevelEnum, teacherProfiles, user } from "../db/schema";
+import { adminProfiles, assignmentTypeEnum, gradeLevelEnum, teacherProfiles, user } from "../db/schema";
 import { auth } from "./auth";
 import { Request } from "express";
-import { GradeLevel } from "../types";
+import { AssignmentType, GradeLevel } from "../types";
 
 export const getSchoolIdForAdmin = async (req: Request) => {
     try {
@@ -159,4 +159,49 @@ export function optionalPositiveInt(value: unknown, fieldName: string): number |
   }
 
   return n;
+}
+
+export function requireDateString(value: unknown, fieldName: string): string {
+    if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error(`${fieldName} is required`);
+    }
+
+    const trimmed = value.trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format`);
+    }
+
+    return trimmed;
+}
+
+export function requireAssignmentType(value: unknown, fieldName: string): AssignmentType {
+    if (typeof value !== "string") {
+        throw new Error(`${fieldName} is required`);
+    }
+
+    const trimmed = value.trim();
+
+    if (!(assignmentTypeEnum.enumValues as readonly string[]).includes(trimmed)) {
+        throw new Error(`${fieldName} must be a valid assignment type`);
+    }
+
+    return trimmed as AssignmentType;
+}
+
+export function requireStringArray(value: unknown, fieldName: string): string[] {
+    if (!Array.isArray(value)) {
+        throw new Error(`${fieldName} must be an array`);
+    }
+
+    const cleaned = value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+
+    if (cleaned.length === 0) {
+        throw new Error(`${fieldName} must contain at least one value`);
+    }
+
+    return [...new Set(cleaned)];
 }

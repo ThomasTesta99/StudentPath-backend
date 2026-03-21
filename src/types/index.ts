@@ -1,4 +1,4 @@
-import { gradeLevelEnum } from "../db/schema";
+import { assignmentTypeEnum, gradeLevelEnum } from "../db/schema";
 
 export type GradeLevel = (typeof gradeLevelEnum.enumValues)[number];
 
@@ -40,3 +40,6 @@ export const ALLOWED_GRADE_LEVELS = [
   "11",
   "12",
 ] as const;
+
+
+export type AssignmentType = typeof assignmentTypeEnum.enumValues[number];

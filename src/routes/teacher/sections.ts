@@ -15,10 +15,9 @@ import {
   assignments,
   assignmentTypeEnum,
 } from "../../db/schema";
+import { AssignmentType } from '../../types';
 
 export const teacherSectionRouter = express.Router();
-
-type AssignmentType = typeof assignmentTypeEnum.enumValues[number];
 
 teacherSectionRouter.get("/", async (req, res) => {
     try {
