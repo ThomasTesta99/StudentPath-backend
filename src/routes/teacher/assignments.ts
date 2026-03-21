@@ -78,9 +78,6 @@ teacherAssignmentsRouter.post("/", async (req, res) => {
         
     } catch (error) {
         console.error("POST /assignments error: ", error);
-        if (error instanceof Error) {
-            return res.status(400).json({ error: error.message });
-        }
         return res.status(500).json({error: "There was an error creating the assignment"});
     }
 })

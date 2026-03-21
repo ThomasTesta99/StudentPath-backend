@@ -1,0 +1,1 @@
+ALTER TABLE "assignments" ALTER COLUMN "points_possible" SET DATA TYPE integer;

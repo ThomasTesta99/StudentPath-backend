@@ -1,4 +1,4 @@
-import { date, doublePrecision, index, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
+import { date, index, integer, pgEnum, pgTable, text } from "drizzle-orm/pg-core";
 import { sections } from "./course";
 import { timestamps } from "./timestamps";
 
@@ -10,7 +10,7 @@ export const assignments = pgTable("assignments", {
     title: text("title").notNull(),
     description: text("description").notNull(), 
     dueDate: date("due_date").notNull(), 
-    pointsPossible: doublePrecision("points_possible").notNull(), 
+    pointsPossible: integer("points_possible").notNull(), 
     type: assignmentTypeEnum("type").notNull(), 
     assignmentGroupId: text("assignment_group_id"), 
     ...timestamps

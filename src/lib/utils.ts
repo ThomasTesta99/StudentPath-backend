@@ -172,6 +172,11 @@ export function requireDateString(value: unknown, fieldName: string): string {
         throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format`);
     }
 
+    const parsed = new Date(trimmed);
+    if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== trimmed) {
+        throw new Error(`${fieldName} must be a valid date in YYYY-MM-DD format`);
+    }
+
     return trimmed;
 }
 

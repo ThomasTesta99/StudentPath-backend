@@ -1,8 +1,8 @@
 import express from "express"
 import { getTeacherInformation } from "../../lib/utils";
-import { courses, periods, sections } from "../../db/schema";
+import { courses, periods, sections, terms } from "../../db/schema";
 import { db } from "../../db";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte } from "drizzle-orm";
 
 export const teacherCourseRouter = express.Router();
 
@@ -14,7 +14,7 @@ teacherCourseRouter.get("/:courseId/sections", async (req, res) => {
         }
 
         const { courseId } = req.params;
-
+        const today = new Date(); 
         const teacherSections = await db
             .select({
                 id: sections.id,
@@ -24,6 +24,7 @@ teacherCourseRouter.get("/:courseId/sections", async (req, res) => {
                 capacity: sections.capacity,
                 periodId: sections.periodId,
                 termId: sections.termId,
+                termName: terms.termName,
                 courseName: courses.name,
                 courseCode: courses.code,
                 gradeLevel: courses.gradeLevel,
@@ -34,10 +35,12 @@ teacherCourseRouter.get("/:courseId/sections", async (req, res) => {
             .from(sections)
             .innerJoin(courses, eq(sections.courseId, courses.id))
             .leftJoin(periods, eq(sections.periodId, periods.id))
+            .innerJoin(terms, eq(terms.id, sections.termId))
             .where(
                 and(
                     eq(sections.courseId, courseId),
-                    eq(sections.teacherId, teacher.userId)
+                    eq(sections.teacherId, teacher.userId),
+                    gte(terms.endDate, today)
                 )
             )
             .orderBy(asc(periods.number), asc(sections.sectionLabel));

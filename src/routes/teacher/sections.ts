@@ -290,7 +290,6 @@ teacherSectionRouter.get("/:sectionId/assignments", async (req, res) => {
 
         if(type){
             if((assignmentTypeEnum.enumValues as readonly string[]).includes(type)){
-                console.log("yes")
                 filterConditions.push(eq(assignments.type, type as AssignmentType));
             }
         }
