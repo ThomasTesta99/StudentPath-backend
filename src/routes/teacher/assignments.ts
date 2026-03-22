@@ -2,7 +2,7 @@ import express from "express";
 import { getTeacherInformation, requireAssignmentType, requireDateString, requirePositiveInt, requireStringArray, requireTrimmedString } from "../../lib/utils";
 import { db } from "../../db";
 import { assignments, NewAssignment, sections } from "../../db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray } from "drizzle-orm";
 
 export const teacherAssignmentsRouter = express.Router();
 
@@ -81,6 +81,52 @@ teacherAssignmentsRouter.post("/", async (req, res) => {
         return res.status(500).json({error: "There was an error creating the assignment"});
     }
 })
+
+teacherAssignmentsRouter.get("/:assignmentId", async (req, res) => {
+    try {
+        const teacher = await getTeacherInformation(req);
+        if (!teacher) {
+            return res.status(401).json({ error: "Not authorized" });
+        }
+
+        const { assignmentId } = req.params;
+
+        const [assignment] = await db
+            .select({
+                ...getTableColumns(assignments),
+
+                section: {
+                    id: sections.id,
+                    courseId: sections.courseId,
+                    sectionLabel: sections.sectionLabel,
+                    roomNumber: sections.roomNumber,
+                    teacherId: sections.teacherId,
+                },
+            })
+            .from(assignments)
+            .innerJoin(sections, eq(assignments.sectionId, sections.id))
+            .where(
+                and(
+                    eq(assignments.id, assignmentId),
+                    eq(sections.teacherId, teacher.userId)
+                )
+            )
+            .limit(1);
+
+        if (!assignment) {
+            return res.status(404).json({ error: "Assignment not found" });
+        }
+
+        return res.status(200).json({
+            data: assignment,
+        });
+    } catch (error) {
+        console.error("GET /assignments/:assignmentId error:", error);
+        return res.status(500).json({
+            error: "There was an error fetching the assignment",
+        });
+    }
+});
 
 teacherAssignmentsRouter.patch("/:assignmentId", async (req, res) => {
     try {
