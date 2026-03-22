@@ -55,7 +55,7 @@ teacherAssignmentsRouter.post("/", async (req, res) => {
         }
 
         const createdAssignments = await db.transaction(async (tx) => {
-            return await db
+            return await tx
                 .insert(assignments)
                 .values(
                     teacherSections.map((section) => ({
