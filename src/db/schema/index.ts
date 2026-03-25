@@ -3,3 +3,4 @@ export * from './school'
 export * from './profiles'
 export * from './course'
 export * from './assignments'
+export * from "./gradebook"
