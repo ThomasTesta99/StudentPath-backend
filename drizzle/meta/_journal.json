@@ -127,6 +127,13 @@
       "when": 1774122349826,
       "tag": "0017_bored_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774457114841,
+      "tag": "0018_sloppy_lord_hawal",
+      "breakpoints": true
     }
   ]
 }
